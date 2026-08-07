@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Thumbnail candidates</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #fff;
+      color: #1a1a1a;
+      font-family: Georgia, "Times New Roman", serif;
+    }
+    main { width: min(1160px, calc(100% - 48px)); margin: 48px auto 64px; }
+    h1 { margin: 0 0 32px; font-size: 36px; }
+    .gallery { display: grid; grid-template-columns: repeat(3, 360px); gap: 34px 28px; }
+    figure { margin: 0; width: 360px; }
+    img { display: block; width: 360px; height: 240px; border: 1px solid #ddd; object-fit: contain; }
+    figcaption { margin-top: 10px; font-family: Arial, sans-serif; font-size: 14px; line-height: 1.4; color: #666; }
+    .label { margin-right: 7px; color: #3e6c99; font-weight: 700; }
+    .square-candidates { margin-top: 48px; }
+    .square-candidates h2 { margin: 0 0 20px; font-size: 28px; }
+    .square-gallery { display: grid; grid-template-columns: repeat(3, 300px); gap: 34px 28px; }
+    .square-gallery figure { width: 300px; }
+    .square-gallery img { width: 300px; height: 300px; object-fit: cover; border-radius: 6px; }
+    @media (max-width: 1160px) { .gallery { grid-template-columns: repeat(2, 360px); } }
+    @media (max-width: 1000px) { .square-gallery { grid-template-columns: repeat(2, 300px); } }
+    @media (max-width: 790px) { .gallery { grid-template-columns: 360px; } }
+    @media (max-width: 680px) { .square-gallery { grid-template-columns: 300px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Thumbnail candidates</h1>
+    <section class="gallery" aria-label="Six Hub card thumbnail candidates">
+      <figure><img src="A.png" alt="Candidate A, typographic title card"><figcaption><span class="label">A</span>Typographic title card with study metadata.</figcaption></figure>
+      <figure><img src="B.png" alt="Candidate B, paper Figure 2"><figcaption><span class="label">B</span>Paper Figure 2 focused on cleansing results.</figcaption></figure>
+      <figure><img src="C.png" alt="Candidate C, estimator equation"><figcaption><span class="label">C</span>The estimator equation as the visual centerpiece.</figcaption></figure>
+      <figure><img src="D.png" alt="Candidate D, Algorithm 1"><figcaption><span class="label">D</span>Algorithm 1 presented as a paper-method card.</figcaption></figure>
+      <figure><img src="E.png" alt="Candidate E, Counterfactual SGD definition"><figcaption><span class="label">E</span>Counterfactual SGD definition crop.</figcaption></figure>
+      <figure><img src="F.png" alt="Candidate F, title and Figure 2 composite"><figcaption><span class="label">F</span>Composite title band and Figure 2.</figcaption></figure>
+    </section>
+    <section class="square-candidates" aria-labelledby="square-heading">
+      <h2 id="square-heading">Square candidates (S1–S6)</h2>
+      <div class="square-gallery">
+        <figure><img src="S1.png" alt="Candidate S1, dark solid typographic card"><figcaption><span class="label">S1</span>Dark navy title card with orange underline and study metadata.</figcaption></figure>
+        <figure><img src="S2.png" alt="Candidate S2, diagonal gradient typographic card"><figcaption><span class="label">S2</span>Deep diagonal gradient with white serif title and blue rule.</figcaption></figure>
+        <figure><img src="S3.png" alt="Candidate S3, Figure 2 paper card"><figcaption><span class="label">S3</span>White paper-style card featuring Figure 2 below a compact title.</figcaption></figure>
+        <figure><img src="S4.png" alt="Candidate S4, SGD influence equation card"><figcaption><span class="label">S4</span>Estimator equation centered between method and venue labels.</figcaption></figure>
+        <figure><img src="S5.png" alt="Candidate S5, geometric blue-band card"><figcaption><span class="label">S5</span>Bold centered title over a blue study band and orange chip.</figcaption></figure>
+        <figure><img src="S6.png" alt="Candidate S6, loose-leaf code motif card"><figcaption><span class="label">S6</span>Loose-leaf code motif with an orange-emphasized line.</figcaption></figure>
+      </div>
+    </section>
+    <section class="square-candidates" aria-labelledby="manifold-heading">
+      <h2 id="manifold-heading">Manifold candidates (M1–M4)</h2>
+      <div class="square-gallery">
+        <figure><img src="M1.png" alt="Candidate M1, dark SGD loss manifold"><figcaption><span class="label">M1</span>Dark blue loss manifold with an orange SGD descent path.</figcaption></figure>
+        <figure><img src="M2.png" alt="Candidate M2, titled dark SGD loss manifold"><figcaption><span class="label">M2</span>Dark manifold with centered title and reproduction-study subtitle.</figcaption></figure>
+        <figure><img src="M3.png" alt="Candidate M3, light SGD loss manifold"><figcaption><span class="label">M3</span>Light blue loss manifold with a rust-orange SGD descent path.</figcaption></figure>
+        <figure><img src="M4.png" alt="Candidate M4, titled light SGD loss manifold"><figcaption><span class="label">M4</span>Light manifold with centered title and reproduction-study subtitle.</figcaption></figure>
+      </div>
+    </section>
+    <section class="square-candidates" aria-labelledby="zigzag-heading">
+      <h2 id="zigzag-heading">Zigzag candidates (J1–J4)</h2>
+      <div class="square-gallery">
+        <figure><img src="J1.png" alt="Candidate J1, rainbow loss landscape with black SGD zigzag"><figcaption><span class="label">J1</span>Jet-colored undulating valley with a sharp black SGD zigzag.</figcaption></figure>
+        <figure><img src="J2.png" alt="Candidate J2, titled rainbow loss landscape with black SGD zigzag"><figcaption><span class="label">J2</span>Jet-colored zigzag landscape with the reproduction-study title.</figcaption></figure>
+        <figure><img src="J3.png" alt="Candidate J3, blue loss landscape with rust SGD zigzag"><figcaption><span class="label">J3</span>Site-palette blue valley with a rust-orange SGD zigzag.</figcaption></figure>
+        <figure><img src="J4.png" alt="Candidate J4, titled blue loss landscape with rust SGD zigzag"><figcaption><span class="label">J4</span>Site-palette zigzag landscape with the reproduction-study title.</figcaption></figure>
+      </div>
+    </section>
+    <section class="square-candidates" aria-labelledby="k-heading">
+      <h2 id="k-heading">K variants (K1–K6)</h2>
+      <div class="square-gallery">
+        <figure><img src="K1.png" alt="Variant K1, mirrored-camera jet landscape"><figcaption><span class="label">K1</span>Mirrored +50° camera view with the true-GD trace re-framed in the lower right.</figcaption></figure>
+        <figure><img src="K2.png" alt="Variant K2, saturated classic-jet landscape"><figcaption><span class="label">K2</span>Richer classic-jet terrain colors with no white blending.</figcaption></figure>
+        <figure><img src="K3.png" alt="Variant K3, white outlined SGD zigzag"><figcaption><span class="label">K3</span>White true-GD zigzag with a thin black outline and ringed endpoint.</figcaption></figure>
+        <figure><img src="K4.png" alt="Variant K4, deeper dramatic loss basin"><figcaption><span class="label">K4</span>A 1.5× deeper basin with taller valley walls and a re-run true-GD trace.</figcaption></figure>
+        <figure><img src="K5.png" alt="Variant K5, bottom title and upper SGD trace"><figcaption><span class="label">K5</span>Bottom-centered title treatment with the true-GD trace moved into the upper field.</figcaption></figure>
+        <figure><img src="K6.png" alt="Variant K6, closer-cropped SGD landscape"><figcaption><span class="label">K6</span>A 1.35× closer crop that lets the true-GD zigzag fill more of the frame.</figcaption></figure>
+      </div>
+    </section>
+    <section class="square-candidates" aria-labelledby="l-heading">
+      <h2 id="l-heading">L palettes (L1–L6)</h2>
+      <div class="square-gallery">
+        <figure><img src="L1.png" alt="Variant L1, muted viridis loss landscape"><figcaption><span class="label">L1</span>Muted viridis: deep violet valley through blue-green to soft yellow ridges.</figcaption></figure>
+        <figure><img src="L2.png" alt="Variant L2, earth-tint loss landscape"><figcaption><span class="label">L2</span>Earth-map tints: olive lowlands, sand and tan slopes, brown highlands.</figcaption></figure>
+        <figure><img src="L3.png" alt="Variant L3, cool blue-gray loss landscape"><figcaption><span class="label">L3</span>Cool blue-gray: a light valley grading to dark slate ridges with an orange trace.</figcaption></figure>
+        <figure><img src="L4.png" alt="Variant L4, pastel warm-gray loss landscape"><figcaption><span class="label">L4</span>Pastel warm gray: paper-light valley to softly shaded taupe ridges.</figcaption></figure>
+        <figure><img src="L5.png" alt="Variant L5, deep-ocean loss landscape"><figcaption><span class="label">L5</span>Deep ocean: navy valley, teal slopes, and pale foam ridges with a warm-orange trace.</figcaption></figure>
+        <figure><img src="L6.png" alt="Variant L6, grayscale-paper loss landscape"><figcaption><span class="label">L6</span>Grayscale paper: white valley to graphite ridges, with the zigzag as the only color accent.</figcaption></figure>
+      </div>
+    </section>
+    <section class="square-candidates" aria-labelledby="n-heading">
+      <h2 id="n-heading">N variants (N1–N6)</h2>
+      <div class="square-gallery">
+        <figure><img src="N1.png" alt="Variant N1, heavy-ball momentum spiral"><figcaption><span class="label">N1</span>High-momentum heavy-ball dynamics spiral into the minimum.</figcaption></figure>
+        <figure><img src="N2.png" alt="Variant N2, large-rate gradient-descent bounce"><figcaption><span class="label">N2</span>A large constant learning rate makes plain gradient descent bounce wall to wall.</figcaption></figure>
+        <figure><img src="N3.png" alt="Variant N3, noisy momentum loops"><figcaption><span class="label">N3</span>Noisy heavy-ball momentum produces looping motion with stochastic jitter.</figcaption></figure>
+        <figure><img src="N4.png" alt="Variant N4, vanilla stochastic gradient descent"><figcaption><span class="label">N4</span>Vanilla constant-rate SGD wanders under strong Gaussian gradient noise.</figcaption></figure>
+        <figure><img src="N5.png" alt="Variant N5, learning-rate-schedule SGD"><figcaption><span class="label">N5</span>Step-decay SGD makes large early bounces before tightening into convergence.</figcaption></figure>
+        <figure><img src="N6.png" alt="Variant N6, Nesterov overshooting loops"><figcaption><span class="label">N6</span>Nesterov lookahead momentum creates its own characteristic overshooting loops.</figcaption></figure>
+      </div>
+    </section>
+    <section class="square-candidates" aria-labelledby="p-heading">
+      <h2 id="p-heading">P layouts (P1–P6)</h2>
+      <div class="square-gallery">
+        <figure><img src="P1.png" alt="Layout P1, centered title at top"><figcaption><span class="label">P1</span>Baseline two-line title centered above the N1 figure.</figcaption></figure>
+        <figure><img src="P2.png" alt="Layout P2, centered title at bottom"><figcaption><span class="label">P2</span>Two-line title and study line centered near the bottom.</figcaption></figure>
+        <figure><img src="P3.png" alt="Layout P3, left-aligned title at top"><figcaption><span class="label">P3</span>Two-line title and study line aligned top-left.</figcaption></figure>
+        <figure><img src="P4.png" alt="Layout P4, left-aligned title at bottom"><figcaption><span class="label">P4</span>Two-line title and study line aligned bottom-left.</figcaption></figure>
+        <figure><img src="P5.png" alt="Layout P5, title inside a top navy band"><figcaption><span class="label">P5</span>Centered title inside a solid full-width top band.</figcaption></figure>
+        <figure><img src="P6.png" alt="Layout P6, minimal single-line title at top"><figcaption><span class="label">P6</span>Compact single-line title preserves the most figure area.</figcaption></figure>
+      </div>
+    </section>
+    <section class="square-candidates" aria-labelledby="q-heading">
+      <h2 id="q-heading">Q layouts (Q1–Q6)</h2>
+      <div class="square-gallery">
+        <figure><img src="Q1.png" alt="Layout Q1, oversized tilted poster title"><figcaption><span class="label">Q1</span>Oversized upper-left title tilts and bleeds like a bold poster.</figcaption></figure>
+        <figure><img src="Q2.png" alt="Layout Q2, dark split panel and cropped N1 figure"><figcaption><span class="label">Q2</span>A dark vertical title panel divides the canvas from a tight figure crop.</figcaption></figure>
+        <figure><img src="Q3.png" alt="Layout Q3, giant translucent SGD backdrop type"><figcaption><span class="label">Q3</span>Giant translucent SGD lettering turns typography into the visual hero.</figcaption></figure>
+        <figure><img src="Q4.png" alt="Layout Q4, museum-framed N1 figure"><figcaption><span class="label">Q4</span>The N1 render sits in an orange museum frame above a formal caption.</figcaption></figure>
+        <figure><img src="Q5.png" alt="Layout Q5, magazine-cover gradient typography"><figcaption><span class="label">Q5</span>A deep lower gradient supports centered magazine-cover typography.</figcaption></figure>
+        <figure><img src="Q6.png" alt="Layout Q6, orange lower-left title plate"><figcaption><span class="label">Q6</span>A flush orange plate anchors the navy title at the lower left.</figcaption></figure>
+      </div>
+    </section>
+    <section class="square-candidates" aria-labelledby="r-heading">
+      <h2 id="r-heading">R layouts (R1–R6)</h2>
+      <div class="square-gallery">
+        <figure><img src="R1.png" alt="Layout R1, quiet endpoint annotation"><figcaption><span class="label">R1</span>A fine leader and map label quietly identify the converged endpoint.</figcaption></figure>
+        <figure><img src="R2.png" alt="Layout R2, overlapping editorial title and conference badge"><figcaption><span class="label">R2</span>Chunky bowl-overlapping type meets a tilted hand-stamped conference badge.</figcaption></figure>
+        <figure><img src="R3.png" alt="Layout R3, terminal window treatment"><figcaption><span class="label">R3</span>A full-canvas macOS terminal frames the experiment as a live reproduction.</figcaption></figure>
+        <figure><img src="R4.png" alt="Layout R4, giant orange outline typography"><figcaption><span class="label">R4</span>Monumental cropped orange outline type turns SGD into the graphic field.</figcaption></figure>
+        <figure><img src="R5.png" alt="Layout R5, blueprint grid and optimizer annotations"><figcaption><span class="label">R5</span>A faint blueprint grid and endpoint notation make the trajectory feel instrumented.</figcaption></figure>
+        <figure><img src="R6.png" alt="Layout R6, zoomed spiral with vertical title"><figcaption><span class="label">R6</span>A tight spiral crop and bottom-to-top edge typography create a vertical editorial cover.</figcaption></figure>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
