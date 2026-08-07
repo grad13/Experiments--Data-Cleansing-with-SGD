@@ -1,3 +1,5 @@
 {
-  "category": "experiments"
+  "name": "Data Cleansing with SGD",
+  "category": "experiments",
+  "thumbnail": "thumbnail.png"
 }
