@@ -611,6 +611,111 @@
   </div>
 </section>
 
+<section id="fixes">
+  <h2><span class="secnum">7</span>Paper vs. code</h2>
+  <p>This chapter pins each of the four issues claimed in <code>extra-1/README.md</code> to the exact statement in the paper, the exact lines of the original implementation, and the exact lines of this implementation. Code references are permalinks pinned to commits: the original at <a href="https://github.com/sato9hara/sgd-influence/tree/ffc8c064bea682342910daabde08e8e2c4ee89d4"><code>sato9hara/sgd-influence @ ffc8c06</code></a>, this repository at <a href="https://github.com/grad13/Experiments--Data-Cleansing-with-SGD/tree/2da9f7bacf334984b166745924dacc184864e8f5"><code>@ 2da9f7b</code></a>; paper pages refer to <a href="https://arxiv.org/abs/1906.08473">arXiv:1906.08473</a>. Verification outcome up front: <strong>§7.1 and §7.2 are real divergences from the paper; §7.4 is a genuine implementation difference on a point the paper leaves undefined; the claim in §7.3 does not hold.</strong> None of this has been confirmed with the original authors.</p>
+  <ul>
+    <li><a href="#fix-1">7.1 — query-update scale</a> (real bug)</li>
+    <li><a href="#fix-2">7.2 — BatchNorm statistics during scoring</a> (real divergence)</li>
+    <li><a href="#fix-3">7.3 — retraining step scale</a> (claim not confirmed)</li>
+    <li><a href="#fix-4">7.4 — batch composition under removal</a> (differing choice)</li>
+  </ul>
+</section>
+
+<section id="fix-1">
+  <p class="eyebrow">Real bug</p>
+  <h2><span class="secnum">7.1</span>The Hessian correction of \(u\) is under-scaled by \(1/|S_t|\)</h2>
+  <div class="part">
+    <p class="part-label paper">The paper</p>
+    <p><strong>Paper</strong> — Algorithm 2 (p.5) propagates the query vector with a single minibatch mean, \(H^{[t]} = \tfrac{1}{|S_t|}\sum_{i\in S_t}\nabla^2_\theta \ell(z_i;\theta^{[t]})\):</p>
+    \[ \hat L_{-j}(u) \mathrel{{+}{=}} \bigl\langle u,\ \tfrac{\eta_t}{|S_t|} g(z_i;\theta^{[t]})\bigr\rangle \ \ \forall i\in S_t, \qquad u \mathrel{{-}{=}} \eta_t H^{[t]} u \]
+    <figure class="paper-shot"><img src="assets/paper/alg2.png" alt="Excerpt of Algorithm 2, the inference phase"><figcaption>Algorithm 2, arXiv:1906.08473 p.5 (excerpt)</figcaption></figure>
+  </div>
+  <div class="part">
+    <p class="part-label orig">Original implementation</p>
+    <div class="codeblock">
+      <div class="codehead"><span>experiment/Sec72/infl.py:117–126</span><a href="https://github.com/sato9hara/sgd-influence/blob/ffc8c064bea682342910daabde08e8e2c4ee89d4/experiment/Sec72/infl.py#L117-L126">view on GitHub</a></div>
+      <pre><code><span class="cl">z = m(Xtr)</span><span class="cl">loss = loss_fn(z, ytr)</span><span class="cl">grad_params = torch.autograd.grad(loss, m.parameters(), create_graph=True)</span><span class="cl">ug = 0</span><span class="cl">for uu, g in zip(u, grad_params):</span><span class="cl">    ug += (uu * g).sum()</span><span class="cl">m.zero_grad()</span><span class="cl">ug.backward()</span><span class="cl">for j, param in enumerate(m.parameters()):</span><span class="cl hl">    u[j] -= lr * param.grad.data / idx.size</span></code></pre>
+    </div>
+    <p><strong>Original</strong> — the loss on line 118 uses the default mean reduction, so <code>param.grad</code> of \(\langle u,\nabla \mathrm{loss}\rangle\) already equals \(H^{[t]}u\); the underlined line then divides by <code>idx.size</code> a second time. The update performed is \(u \leftarrow u - \tfrac{\eta_t}{|S_t|} H^{[t]} u\) — with \(|S_t|=64\) the Hessian correction is 64× too small, so every propagation factor \(Z_t = I-\eta_t H^{[t]}\) (Eq. 2, p.4) degenerates toward the identity.</p>
+  </div>
+  <div class="part">
+    <p class="part-label ours">This implementation</p>
+    <div class="codeblock">
+      <div class="codehead"><span>extra-1/code/2-score.py:54–62</span><a href="https://github.com/grad13/Experiments--Data-Cleansing-with-SGD/blob/2da9f7bacf334984b166745924dacc184864e8f5/extra-1/code/2-score.py#L54-L62">view on GitHub</a></div>
+      <pre><code><span class="cl">model.train()</span><span class="cl">logit = model(x)</span><span class="cl">loss  = F.cross_entropy(logit, y)</span><span class="cl">grads = torch.autograd.grad(loss, model.parameters(), create_graph=True)</span><span class="cl">qg = sum( (q*g).sum() for q,g in zip(query, grads) )</span><span class="cl">model.zero_grad()</span><span class="cl">qg.backward()</span><span class="cl">for j, param in enumerate(model.parameters()):</span><span class="cl hl">    query[j] -= config.lr * param.grad.data</span></code></pre>
+    </div>
+    <p><strong>This implementation</strong> — the mean-reduced loss is differentiated once and applied with no extra division: exactly \(u \mathrel{{-}{=}} \eta_t H^{[t]} u\).</p>
+  </div>
+  <div class="part">
+    <p class="part-label verdict">The difference</p>
+    <p>The score accumulation itself is fine on both sides: Algorithm 2 accumulates \(\langle u, \tfrac{\eta_t}{|S_t|} g(z_i)\rangle\), and the original's <a href="https://github.com/sato9hara/sgd-influence/blob/ffc8c064bea682342910daabde08e8e2c4ee89d4/experiment/Sec72/infl.py#L112"><code>infl.py:112</code></a> (<code>… / idx.size</code>) is correct on that point. <code>extra-1/README.md</code> quotes line 112 under this item, but the actual double division sits in the \(u\) update (line 126). This implementation also keeps the correct accumulation scale: <a href="https://github.com/grad13/Experiments--Data-Cleansing-with-SGD/blob/2da9f7bacf334984b166745924dacc184864e8f5/extra-1/code/2-score.py#L43-L50"><code>2-score.py:43–50</code></a> differentiates the mean loss, and <code>exgrads</code>' per-example <code>grad1</code> carries that \(1/|S_t|\) factor (verified against <code>exgrads/hooks.py</code>: <code>grad1</code> is assembled from the actual backward signal).</p>
+  </div>
+</section>
+
+<section id="fix-2">
+  <p class="eyebrow">Real divergence</p>
+  <h2><span class="secnum">7.2</span>Per-example gradients are taken under batch-size-1 statistics</h2>
+  <div class="part">
+    <p class="part-label paper">The paper</p>
+    <p><strong>Paper</strong> — Eq. (2) (p.4) is</p>
+    \[ \theta^{[T]}_{-j}-\theta^{[T]} \approx \tfrac{\eta_{\pi(j)}}{|S_{\pi(j)}|}\, Z_{T-1}\cdots Z_{\pi(j)+1}\, g(z_j;\theta^{[\pi(j)]}) =: \Delta\theta_{-j}, \qquad Z_t = I-\eta_t H^{[t]} \]
+    <figure class="paper-shot"><img src="assets/paper/eq2.png" alt="Excerpt of Equation 2, the one-epoch estimator"><figcaption>Equation (2), arXiv:1906.08473 p.4 (excerpt)</figcaption></figure>
+    <p>Eq. (2) and Algorithm 2 (p.5) evaluate \(g(z_i;\theta^{[t]})\) and \(H^{[t]}\) at the same \(\theta^{[t]}\) that produced the training trajectory. With BatchNorm, the loss that generated the trajectory was computed under the batch statistics of the full minibatch \(S_t\); a consistent estimator must evaluate the per-example gradients under those same statistics.</p>
+  </div>
+  <div class="part">
+    <p class="part-label orig">Original implementation</p>
+    <div class="codeblock">
+      <div class="codehead"><span>experiment/Sec72/infl.py:100–110</span><a href="https://github.com/sato9hara/sgd-influence/blob/ffc8c064bea682342910daabde08e8e2c4ee89d4/experiment/Sec72/infl.py#L100-L110">view on GitHub</a></div>
+      <pre><code><span class="cl">Xtr = []</span><span class="cl">ytr = []</span><span class="cl">for i, s in zip(idx, seeds):</span><span class="cl">    trainset.seed = s</span><span class="cl">    d = trainset[idx_train[i]]</span><span class="cl">    Xtr.append(d[0])</span><span class="cl">    ytr.append(d[1])</span><span class="cl hl">    z = m(torch.stack([d[0]]).to(device))</span><span class="cl">    loss = loss_fn(z, torch.from_numpy(np.array([d[1]])).to(device))</span><span class="cl">    m.zero_grad()</span><span class="cl">    loss.backward()</span></code></pre>
+    </div>
+    <p><strong>Original</strong> — each example is forwarded <em>alone</em> through a model left in training mode. BatchNorm therefore normalizes with the statistics of a single example — a different function than the one the trajectory was trained under — and, as a side effect, every such forward overwrites the stored <code>running_mean</code>/<code>running_var</code>. This affects the CIFAR-10 model (which contains BatchNorm); the MNIST model has none.</p>
+  </div>
+  <div class="part">
+    <p class="part-label ours">This implementation</p>
+    <div class="codeblock">
+      <div class="codehead"><span>extra-1/code/2-score.py:38–47</span><a href="https://github.com/grad13/Experiments--Data-Cleansing-with-SGD/blob/2da9f7bacf334984b166745924dacc184864e8f5/extra-1/code/2-score.py#L38-L47">view on GitHub</a></div>
+      <pre><code><span class="cl">model.train()</span><span class="cl">for m in model.modules(): # run batch-norm but not update running stats</span><span class="cl">    if hasattr(m, &#x27;track_running_stats&#x27;):</span><span class="cl hl">        m.track_running_stats = False</span><span class="cl"></span><span class="cl">exgrads.hooks.register(model)</span><span class="cl hl">logit = model(x)</span><span class="cl">loss = F.cross_entropy(logit, y)</span><span class="cl">loss.backward()</span><span class="cl">exgrads.hooks.compute_grad1(model)</span></code></pre>
+    </div>
+    <p><strong>This implementation</strong> — the whole minibatch is forwarded once in training mode (batch statistics of \(S_t\), matching training) and per-example gradients are extracted with <code>exgrads</code>; <code>track_running_stats</code> is disabled on every BatchNorm module first, so the stored statistics of the loaded snapshot are never mutated.</p>
+  </div>
+  <div class="part">
+    <p class="part-label verdict">The difference</p>
+    <p>The original computes \(g(z_i)\) under batch-size-1 statistics — a different function from the one that generated the trajectory — and pollutes the stored statistics while doing so. The fix evaluates the same gradients the trajectory actually saw.</p>
+  </div>
+</section>
+
+<section id="fix-3">
+  <p class="eyebrow">Claim not confirmed</p>
+  <h2><span class="secnum">7.3</span>The claimed “double averaging” in counterfactual SGD does not occur</h2>
+  <div class="part">
+    <p class="part-label paper">The paper</p>
+    <p><strong>Paper</strong> — Definition 2 “Counterfactual SGD” (p.3): the removed example's gradient is dropped, but the normalization stays \(1/|S_t|\) (not \(1/(|S_t|-1)\)):</p>
+    \[ \theta^{[t+1]}_{-j} \leftarrow \theta^{[t]}_{-j} - \tfrac{\eta_t}{|S_t|}\textstyle\sum_{i\in S_t\setminus\{j\}} g(z_i;\theta^{[t]}_{-j}) \]
+    <figure class="paper-shot"><img src="assets/paper/def2.png" alt="Excerpt of Definition 2 defining counterfactual SGD"><figcaption>Definition 2, arXiv:1906.08473 p.3 (excerpt)</figcaption></figure>
+  </div>
+  <div class="part">
+    <p class="part-label orig">Original implementation</p>
+    <div class="codeblock">
+      <div class="codehead"><span>experiment/Sec72/eval.py:65–73</span><a href="https://github.com/sato9hara/sgd-influence/blob/ffc8c064bea682342910daabde08e8e2c4ee89d4/experiment/Sec72/eval.py#L65-L73">view on GitHub</a></div>
+      <pre><code><span class="cl">Xtr = torch.stack(Xtr).to(device)</span><span class="cl">ytr = torch.from_numpy(np.array(ytr)).to(device)</span><span class="cl">z = model(Xtr)</span><span class="cl">loss = loss_fn(z, ytr)</span><span class="cl">optimizer.zero_grad()</span><span class="cl">loss.backward()</span><span class="cl">for param in model.parameters():</span><span class="cl hl">    param.grad.data *= t / idx.size</span><span class="cl">optimizer.step()</span></code></pre>
+    </div>
+    <p><strong>Original</strong> — the loss is the mean over the \(t\) kept examples, and the gradient is then rescaled by <code>t / idx.size</code>. The net update is \(\tfrac{t}{|S_t|}\cdot\tfrac{1}{t}\sum_{i\in\mathrm{kept}} g_i = \tfrac{1}{|S_t|}\sum_{i\in\mathrm{kept}} g_i\) — <em>exactly</em> Definition 2. <code>extra-1/README.md</code> item 3 claims the mean reduction makes this a second averaging; that overlooks that the mean is over \(t\) (the kept examples), and the multiplier converts it to the \(1/|S_t|\) scale.</p>
+  </div>
+  <div class="part">
+    <p class="part-label ours">This implementation</p>
+    <div class="codeblock">
+      <div class="codehead"><span>extra-1/code/3-evaluate.py:34–39</span><a href="https://github.com/grad13/Experiments--Data-Cleansing-with-SGD/blob/2da9f7bacf334984b166745924dacc184864e8f5/extra-1/code/3-evaluate.py#L34-L39">view on GitHub</a></div>
+      <pre><code><span class="cl">logit = model(x)</span><span class="cl">loss  = F.cross_entropy(logit, y, reduction=&#x27;none&#x27;)</span><span class="cl hl">loss  = (loss*good_mask).mean()</span><span class="cl"></span><span class="cl">optimizer.zero_grad()</span><span class="cl">loss.backward()</span></code></pre>
+    </div>
+    <p><strong>This implementation</strong> — <code>(loss·good_mask).mean()</code>: the mean runs over the full \(|S_t|\) entries with removed ones zeroed, i.e. \(\tfrac{1}{|S_t|}\sum_{\mathrm{kept}} g\) — the identical scale.</p>
+  </div>
+  <div class="part">
+    <p class="part-label verdict">The difference</p>
+    <div class="note"><strong>Verification result:</strong> both implementations produce the <em>identical</em> update scale, and both match Definition 2. There was no scale bug to fix; the substantive difference between the two eval implementations is entirely §7.4.</div>
+  </div>
+</section>
+
 <section id="fix-4">
   <p class="eyebrow">Real difference</p>
   <h2><span class="secnum">7.4</span>What should BatchNorm see when examples are removed?</h2>
@@ -633,7 +738,7 @@
   <div class="part">
     <p class="part-label ours">This implementation</p>
     <div class="codeblock">
-      <div class="codehead"><span>extra-1/code/3-evaluate.py:29–36</span><a href="https://github.com/grad13/Experiments--Data-Cleansing-with-SGD/blob/9b2b96ee27c0ad6ba68127e4d260677f4bb06f2b/extra-1/code/3-evaluate.py#L29-L36">view on GitHub</a></div>
+      <div class="codehead"><span>extra-1/code/3-evaluate.py:29–36</span><a href="https://github.com/grad13/Experiments--Data-Cleansing-with-SGD/blob/2da9f7bacf334984b166745924dacc184864e8f5/extra-1/code/3-evaluate.py#L29-L36">view on GitHub</a></div>
       <pre><code><span class="cl">for i,x,y in datasets.train:</span><span class="cl">    wrong_mask = torch.tensor([iii.item() in removal_index for iii in i])</span><span class="cl">    good_mask  = ~wrong_mask</span><span class="cl">    good_mask  = good_mask.cuda(config.gpu)</span><span class="cl"></span><span class="cl hl">    logit = model(x)</span><span class="cl">    loss  = F.cross_entropy(logit, y, reduction='none')</span><span class="cl hl">    loss  = (loss*good_mask).mean()</span></code></pre>
     </div>
     <p><strong>This implementation</strong> — the full original batch is forwarded, and removed examples are masked out of the unreduced loss.</p>
@@ -660,7 +765,7 @@
     </ul>
   </div>
 
-  <p>One further correction outside the four: random-crop padding is filled with the normalized value of a raw zero pixel (<code>−mean/std</code>, per channel on CIFAR-10) instead of a literal zero in normalized space (<a href="https://github.com/grad13/Experiments--Data-Cleansing-with-SGD/blob/9b2b96ee27c0ad6ba68127e4d260677f4bb06f2b/extra-1/code/augmentation_zoo.py"><code>extra-1/code/augmentation_zoo.py</code></a>). This concerns data augmentation, not the estimator, and has no counterpart in the paper.</p>
+  <p>One further correction outside the four: random-crop padding is filled with the normalized value of a raw zero pixel (<code>−mean/std</code>, per channel on CIFAR-10) instead of a literal zero in normalized space (<a href="https://github.com/grad13/Experiments--Data-Cleansing-with-SGD/blob/2da9f7bacf334984b166745924dacc184864e8f5/extra-1/code/augmentation_zoo.py"><code>extra-1/code/augmentation_zoo.py</code></a>). This concerns data augmentation, not the estimator, and has no counterpart in the paper.</p>
 
   <h3>extra-1/ — <code>run.py</code> (jobs distributed over GPUs 0–7)</h3>
   <ol class="steps">
