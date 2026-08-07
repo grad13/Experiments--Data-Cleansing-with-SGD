@@ -1,0 +1,22 @@
+name: Deploy Experiments--Data-Cleansing-with-SGD
+
+on:
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: choice
+        required: true
+        default: dev
+        options: [dev, prod]
+
+jobs:
+  deploy:
+    uses: grad13/launch-pad/.github/workflows/deploy-fullsite.yml@v1
+    with:
+      name: Experiments--Data-Cleansing-with-SGD
+      source_dir: site/
+      environment: ${{ github.event.inputs.environment }}
+      prod_smoke: true
+    secrets: inherit
