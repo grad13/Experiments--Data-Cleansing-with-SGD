@@ -1,0 +1,812 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script id="MathJax-script" async src="vendor/mathjax/tex-svg.js"></script>
+<title>Data Cleansing with SGD-Influence — Reproduction &amp; Bug-Fix Study</title>
+<style>
+  /* Single fixed theme: white background regardless of viewer theme. */
+  :root, :root[data-theme="light"], :root[data-theme="dark"] {
+    --paper: #FFFFFF;
+    --card: #FFFFFF;
+    --ink: #1C2732;
+    --muted: #5C6B77;
+    --line: #D8DEE3;
+    --forward: #3E6C99;
+    --forward-soft: #E3EBF3;
+    --reverse: #B0521D;
+    --reverse-soft: #F5E7DC;
+    --code-bg: #F2F4F6;
+    --shadow: 0 1px 2px rgba(28, 39, 50, 0.06), 0 8px 24px rgba(28, 39, 50, 0.05);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  :root { --sidebar-w: clamp(9rem, 18vw, 14rem); }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: Charter, "Iowan Old Style", Georgia, "Times New Roman", serif;
+    font-size: 1.0625rem;
+    line-height: 1.65;
+    margin: 0;
+  }
+
+  .wrap {
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 0 1.25rem 5rem;
+  }
+  /* .breakout is defined at the end of the stylesheet so its margin-left
+     survives later margin shorthands on .cards/.figgrid/figure. */
+
+  a { color: var(--forward); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--reverse); outline-offset: 2px; }
+
+  code, .mono {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.86em;
+  }
+  code {
+    background: var(--code-bg);
+    border-radius: 3px;
+    padding: 0.1em 0.35em;
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 0.9rem 1.1rem;
+    line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; }
+
+  h1, h2, h3 { text-wrap: balance; line-height: 1.25; }
+  h1 { font-size: clamp(1.6rem, 3.8vw, 2.3rem); font-weight: 700; margin: 0.4rem 0 0.8rem; white-space: nowrap; }
+  h2 { font-size: 1.45rem; margin: 0 0 0.9rem; }
+  h3 { font-size: 1.1rem; margin: 1.6rem 0 0.5rem; }
+
+  .eyebrow {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  section { margin-top: 4.2rem; }
+  .secnum { color: var(--reverse); font-weight: 700; margin-right: 0.4rem; }
+  p { margin: 0.8rem 0; }
+  .lede { font-size: 1.15rem; color: var(--muted); max-width: 38rem; }
+
+  header.hero { padding-top: 4rem; }
+  .hero-links { display: flex; flex-wrap: wrap; gap: 0.6rem 1.4rem; margin-top: 1rem; font-size: 0.92rem; }
+
+  .paper-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--forward);
+    border-radius: 6px;
+    box-shadow: var(--shadow);
+    padding: 1.2rem 1.4rem;
+    margin: 1.6rem 0;
+  }
+  .paper-label {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--forward);
+    margin: 0 0 0.5rem;
+  }
+  .paper-title { font-size: 1.25rem; font-weight: 700; margin: 0 0 0.4rem; text-wrap: balance; }
+  .paper-authors { margin: 0 0 0.3rem; }
+  .paper-venue { margin: 0; color: var(--muted); font-size: 0.95rem; }
+
+  figure { margin: 1.6rem 0; }
+  figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 0.5rem; line-height: 1.5; }
+  .paper-shot { background: var(--code-bg); border: 1px solid var(--line); border-radius: 6px; padding: 1rem 1rem 0.7rem; text-align: center; }
+  .paper-shot img { max-width: min(100%, 34rem); border: 1px solid var(--line); border-radius: 3px; background: #fff; box-shadow: 0 1px 3px rgba(28,39,50,0.12); }
+  .paper-shot figcaption { font-size: 0.8rem; color: var(--muted); margin-top: 0.5rem; }
+  .diagram-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    padding: 1.2rem;
+    overflow-x: auto;
+  }
+  .diagram-card svg { display: block; min-width: 640px; width: 100%; height: auto; }
+
+  .legend { display: flex; gap: 1.4rem; flex-wrap: wrap; margin-top: 0.7rem; font-size: 0.85rem; color: var(--muted); }
+  .legend .chip { display: inline-block; width: 0.75em; height: 0.75em; border-radius: 2px; margin-right: 0.45em; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: 1.1rem; margin: 1.4rem 0; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    padding: 1.2rem 1.3rem;
+  }
+  .card h3 { margin-top: 0.2rem; }
+  .card .tag {
+    display: inline-block;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border-radius: 999px;
+    padding: 0.2em 0.75em;
+  }
+  .tag.forward { background: var(--forward-soft); color: var(--forward); }
+  .tag.reverse { background: var(--reverse-soft); color: var(--reverse); }
+  .card ul { padding-left: 1.1rem; margin: 0.6rem 0 0; }
+  .card li { margin: 0.3rem 0; }
+
+  .steps { list-style: none; counter-reset: step; padding: 0; margin: 1.2rem 0; display: grid; gap: 0.7rem; }
+  .steps li {
+    counter-increment: step;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 0.75rem 1rem 0.75rem 3rem;
+    position: relative;
+  }
+  .steps li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0.95rem;
+    top: 0.85rem;
+    width: 1.35rem; height: 1.35rem;
+    border-radius: 50%;
+    background: var(--forward-soft);
+    color: var(--forward);
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.78rem;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .steps .out { display: block; font-size: 0.85rem; color: var(--muted); margin-top: 0.15rem; }
+
+  .part { margin-top: 2.4rem; }
+  .part-label { display: flex; align-items: center; gap: 0.7rem; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; margin: 0 0 0.8rem; }
+  .part-label::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .part-label.paper { color: var(--forward); }
+  .part-label.orig { color: var(--reverse); }
+  .part-label.ours { color: #2E7D57; }
+  .part-label.verdict { color: var(--ink); }
+  .codeblock { border: 1px solid var(--line); border-radius: 6px; overflow-x: auto; margin: 0.9rem 0; }
+  .codeblock .codehead { display: flex; justify-content: space-between; gap: 1rem; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.78rem; padding: 0.45rem 0.9rem; background: var(--code-bg); border-bottom: 1px solid var(--line); color: var(--muted); }
+  .codeblock pre { margin: 0; border: none; border-radius: 0; background: #fff; padding: 0.4rem 0 0.5rem; background-image: linear-gradient(to right, transparent 1.6rem, var(--reverse-soft) 1.6rem, var(--reverse-soft) calc(1.6rem + 2px), transparent calc(1.6rem + 2px)); }
+  .cl { display: block; padding: 0.18rem 1rem 0.18rem 2.4rem; border-bottom: 1px solid #E3ECF3; white-space: pre; }
+  .cl:last-child { border-bottom: none; }
+  .cl.hl { text-decoration: underline; text-decoration-color: var(--reverse); text-decoration-thickness: 2px; text-underline-offset: 4px; }
+  .wrongright { display: grid; gap: 0.5rem; margin: 0.7rem 0 0.3rem; font-size: 0.95rem; }
+  .wrongright > div { padding-left: 1.5rem; position: relative; }
+  .wrongright > div::before { position: absolute; left: 0; font-weight: 700; }
+  .wrongright .wrong::before { content: "✕"; color: var(--reverse); }
+  .wrongright .right::before { content: "✓"; color: var(--forward); }
+
+  table { border-collapse: collapse; width: 100%; font-size: 0.95rem; }
+  .tablewrap { overflow-x: auto; margin: 1.2rem 0; background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
+  th, td { text-align: left; padding: 0.6rem 0.9rem; border-top: 1px solid var(--line); vertical-align: top; }
+  thead th { border-top: none; font-size: 0.78rem; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  td:first-child { font-variant-numeric: tabular-nums; }
+
+  .figgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(21rem, 100%), 1fr)); gap: 1.1rem; margin: 1.4rem 0; }
+  .figgrid figure:not(.paper-shot) { margin: 0; background: var(--card); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); padding: 0.8rem; }
+  .figgrid figure:not(.paper-shot) img { width: 100%; height: auto; border-radius: 4px; display: block; background: #fff; }
+  .fignote { display: flex; flex-direction: column; justify-content: center; background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 1.3rem 1.5rem; font-size: 0.97rem; }
+  .fignote .fignote-label { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin: 0 0 0.5rem; }
+  .fignote p { margin: 0; }
+  .fignote p + p { margin-top: 0.5rem; }
+
+  .note {
+    background: var(--forward-soft);
+    border-radius: 6px;
+    padding: 0.8rem 1.1rem;
+    font-size: 0.95rem;
+    margin: 1.2rem 0;
+  }
+  .note strong:first-child { color: var(--forward); }
+
+  footer {
+    position: fixed; left: var(--sidebar-w); right: 0; bottom: 0; z-index: 5;
+    background: var(--paper); border-top: 1px solid var(--line);
+    padding: 0.5rem 1.4rem; font-size: 0.78rem; color: var(--muted);
+    display: flex; flex-wrap: wrap; gap: 0.2rem 1.4rem; justify-content: space-between;
+  }
+  footer p { margin: 0; }
+
+  /* Comparison matrix: columns = implementation, rows = replay protocol. */
+  .matrix { display: grid; grid-template-columns: 6.5rem 1fr 1fr; gap: 0.8rem; margin: 1.2rem 0; }
+  .mx-col, .mx-row {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
+  }
+  .mx-col { text-align: center; align-self: end; padding-bottom: 0.1rem; }
+  .mx-row { display: flex; flex-direction: column; justify-content: center; text-align: right; gap: 0.25rem; }
+  .mx-row code { text-transform: none; letter-spacing: 0; }
+  .matrix figure { margin: 0; background: var(--card); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); padding: 0.7rem; }
+  .matrix figure img { width: 100%; height: auto; display: block; background: #fff; border-radius: 4px; }
+  .mx-empty { border: 1px dashed var(--line); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 0.85rem; padding: 1rem; text-align: center; }
+  .panel-label { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase; margin: 0 0 0.5rem; }
+  .readkey { margin-top: 1.7rem; }
+  .readkey .panel-label { color: var(--muted); }
+  .mapkey { width: auto; font-size: 0.88rem; margin: 0.2rem 0 0.7rem; }
+  .mapkey th { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); border-top: none; padding: 0.3rem 2.2rem 0.3rem 0; }
+  .mapkey td { border-top: 1px solid var(--line); padding: 0.32rem 2.2rem 0.32rem 0; }
+  .keynote { font-size: 0.85rem; color: var(--muted); margin: 0.3rem 0 0; }
+
+  /* 6.2 split columns: observations + conclusion left, key right. */
+  .splitnote { display: grid; grid-template-columns: minmax(17rem, 1.5fr) minmax(14rem, 1fr); gap: 1.7rem; margin-top: 1.5rem; }
+  .splitnote .obs p { margin: 0 0 0.65rem; font-size: 0.97rem; }
+  .splitnote .obs .sum { font-weight: 600; border-left: 3px solid var(--reverse); padding-left: 0.85rem; font-size: 1.02rem; }
+  .splitnote .skey .mapkey { margin-top: 0.1rem; }
+  @media (max-width: 64rem) { .splitnote { grid-template-columns: 1fr; } }
+
+  /* 9.x long caption (journal style). */
+  .longcap { border-top: 2px solid var(--ink); padding-top: 0.75rem; margin-top: 1.5rem; font-size: 0.92rem; line-height: 1.6; }
+  .longcap .figno, .longcap .runin { font-weight: 700; }
+  .longcap .fine { color: var(--muted); } }
+
+  /* Sidebar table of contents: always visible, fixed to the left edge. */
+  body { margin-left: var(--sidebar-w); }
+  .toc {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: var(--sidebar-w);
+    overflow-y: auto;
+    border-right: 1px solid var(--line);
+    padding: 2.2rem 1rem 2rem;
+    background: var(--paper);
+  }
+  .toc-title {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 1rem;
+  }
+  .toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.15rem; }
+  .toc a {
+    display: grid;
+    grid-template-columns: 1.2rem 1fr;
+    align-items: baseline;
+    column-gap: 0;
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.88rem;
+    line-height: 1.4;
+    padding: 0.35rem 0.55rem;
+    border-left: 2px solid transparent;
+    border-radius: 0 4px 4px 0;
+  }
+  .toc > ol > li:first-child > a { grid-template-columns: 1fr; }
+  .toc a:hover { color: var(--ink); background: var(--code-bg); border-left-color: var(--reverse); }
+  .toc a.active { color: var(--ink); background: var(--code-bg); border-left-color: var(--reverse); }
+
+  /* Tabbed mode (enabled by JS): one section per page, switched from the sidebar. */
+  html.tabbed header.hero, html.tabbed .wrap > section { display: none; }
+  html.tabbed header.hero.page-active, html.tabbed .wrap > section.page-active { display: block; }
+  html.tabbed .wrap > section { margin-top: 2.5rem; }
+  html.tabbed header.hero { padding-top: 2.5rem; }
+  .toc .n {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.75rem;
+    color: var(--reverse);
+    margin-right: 0;
+  }
+  .toc ol ol { margin: 0.15rem 0 0.3rem 1rem; gap: 0.05rem; }
+  .toc ol ol a { grid-template-columns: 1.6rem 1fr; font-size: 0.8rem; padding: 0.25rem 0.5rem; }
+  .toc ol ol .n { font-size: 0.68rem; }
+  .toc-part { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); list-style: none; margin: 1.2rem 0 0.4rem; padding-top: 0.9rem; border-top: 1px solid var(--line); }
+  header.hero, section { scroll-margin-top: 1.5rem; }
+
+  /* Kept last: margin-left must not be overridden by earlier margin shorthands. */
+  .breakout {
+    width: min(60rem, calc(100vw - var(--sidebar-w) - 2.5rem));
+    margin-left: 50%;
+    transform: translateX(-50%);
+  }
+</style>
+</head>
+<body>
+
+
+<nav class="toc" aria-label="Table of contents">
+  <p class="toc-title">Contents</p>
+  <ol>
+    <li><a href="#top">Motivation</a></li>
+    <li class="toc-part">1 · Method</li>
+    <li><a href="#idea"><span class="n">1</span>The idea</a></li>
+    <li><a href="#estimator"><span class="n">2</span>The estimator</a></li>
+    <li><a href="#algorithm"><span class="n">3</span>Algorithm &amp; cost</a></li>
+    <li><a href="#useful"><span class="n">4</span>Uses</a></li>
+    <li><a href="#related"><span class="n">5</span>Related work</a></li>
+    <li class="toc-part">2 · Experiments</li>
+    <li>
+      <a href="#reproduction"><span class="n">6</span>Reproduction</a>
+      <ol>
+        <li><a href="#repro-code"><span class="n">6.1</span>Code</a></li>
+        <li><a href="#repro-results"><span class="n">6.2</span>Results</a></li>
+      </ol>
+    </li>
+    <li>
+      <a href="#fixes"><span class="n">7</span>Paper vs. code</a>
+      <ol>
+        <li><a href="#fix-1"><span class="n">7.1</span>Query scale</a></li>
+        <li><a href="#fix-2"><span class="n">7.2</span>BatchNorm</a></li>
+        <li><a href="#fix-3"><span class="n">7.3</span>Step scale</a></li>
+        <li><a href="#fix-4"><span class="n">7.4</span>Batch masking</a></li>
+      </ol>
+    </li>
+    <li><a href="#modified"><span class="n">8</span>Modified experiments</a></li>
+    <li>
+      <a href="#comparison"><span class="n">9</span>Comparison</a>
+      <ol>
+        <li><a href="#comp-mnist"><span class="n">9.1</span>MNIST</a></li>
+        <li><a href="#comp-cifar"><span class="n">9.2</span>CIFAR-10</a></li>
+      </ol>
+    </li>
+    <li class="toc-part">3 · Conclusion</li>
+    <li><a href="#conclusion"><span class="n">10</span>Conclusion</a></li>
+    <li class="toc-part">Appendix</li>
+    <li><a href="#settings"><span class="n">A</span>Experimental settings</a></li>
+  </ol>
+</nav>
+
+<div class="wrap">
+
+<header class="hero" id="top">
+  <p class="eyebrow">Reproduction &amp; bug-fix study</p>
+  <h1>Data Cleansing with SGD-Influence</h1>
+
+  <div class="paper-card">
+    <p class="paper-label">The paper</p>
+    <p class="paper-title">“Data Cleansing for Models Trained with SGD”</p>
+    <p class="paper-authors">Satoshi Hara · Atsushi Nitanda · Takanori Maehara</p>
+    <p class="paper-venue">Accepted at <strong>NeurIPS 2019</strong> (33rd Conference on Neural Information Processing Systems)</p>
+    <div class="hero-links">
+      <span><a href="https://papers.nips.cc/paper/2019/hash/5f14615696649541a025d3d0f8e0447f-Abstract.html">NeurIPS proceedings</a></span>
+      <span><a href="https://arxiv.org/abs/1906.08473">arXiv:1906.08473</a></span>
+      <span><a href="https://github.com/sato9hara/sgd-influence">Official code (sato9hara/sgd-influence)</a></span>
+    </div>
+  </div>
+
+  <p><strong>The main aim of this directory</strong> is twofold: the Method chapter (§1–§5) explains the paper — what SGD-influence is, why it is useful, and how it relates to earlier work. The Experiments chapter (§6–§9) documents the faithful reproduction, four examined differences between paper and code, the modified experiments, and their performance comparison; the Conclusion (§10) sums up, and Appendix A records the experimental settings.</p>
+
+</header>
+
+<section id="idea">
+  <h2><span class="secnum">1</span>The idea in brief</h2>
+  <p>The counterfactual question is: <em>how would the validation loss change if training example <code>zᵢ</code> had been absent?</em> Classical influence functions answer it for converged empirical-risk minimizers; <strong>SGD-influence</strong> answers it for the model you actually have — the product of a specific SGD trajectory.</p>
+  <p>Because training saved the parameters at <em>every minibatch step</em>, the effect of removing one example can be estimated linearly along that exact trajectory. The estimator starts from the validation-loss gradient at the final model and walks the saved steps in reverse chronological order, propagating a query vector <code>u</code> through each step and accumulating, for every training example, how much its gradient at that step moved the validation loss.</p>
+
+  <figure class="breakout">
+    <div class="diagram-card">
+      <svg viewBox="0 0 880 240" role="img" aria-label="Diagram: forward SGD training saves parameter snapshots at every minibatch step; the influence pass traverses those snapshots in reverse, starting from the validation gradient, accumulating a per-example influence score.">
+        <defs>
+          <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--forward)"/>
+          </marker>
+          <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--reverse)"/>
+          </marker>
+        </defs>
+        <!-- forward lane -->
+        <text x="40" y="52" fill="var(--forward)" font-family="ui-monospace, Menlo, monospace" font-size="13" letter-spacing="1.5">FORWARD · SGD TRAINING</text>
+        <line x1="40" y1="100" x2="700" y2="100" stroke="var(--forward)" stroke-width="2" marker-end="url(#af)"/>
+        <!-- snapshots -->
+        <g font-family="ui-monospace, Menlo, monospace" font-size="12" text-anchor="middle">
+          <g>
+            <rect x="70" y="80" width="44" height="40" rx="5" fill="var(--forward-soft)" stroke="var(--forward)"/>
+            <text x="92" y="105" fill="var(--forward)">θ₀</text>
+          </g>
+          <g>
+            <rect x="200" y="80" width="44" height="40" rx="5" fill="var(--forward-soft)" stroke="var(--forward)"/>
+            <text x="222" y="105" fill="var(--forward)">θ₁</text>
+          </g>
+          <g>
+            <rect x="330" y="80" width="44" height="40" rx="5" fill="var(--forward-soft)" stroke="var(--forward)"/>
+            <text x="352" y="105" fill="var(--forward)">θ₂</text>
+          </g>
+          <text x="440" y="105" fill="var(--muted)">…</text>
+          <g>
+            <rect x="510" y="80" width="52" height="40" rx="5" fill="var(--forward-soft)" stroke="var(--forward)"/>
+            <text x="536" y="105" fill="var(--forward)">θ_T</text>
+          </g>
+          <text x="150" y="72" fill="var(--muted)" font-size="11">minibatch step</text>
+          <text x="640" y="92" fill="var(--forward)" font-size="12" text-anchor="start">save every step</text>
+        </g>
+        <!-- validation gradient entry -->
+        <g font-family="ui-monospace, Menlo, monospace" font-size="12">
+          <rect x="700" y="140" width="150" height="42" rx="5" fill="var(--reverse-soft)" stroke="var(--reverse)"/>
+          <text x="775" y="160" fill="var(--reverse)" text-anchor="middle">u = ∇ val loss</text>
+          <text x="775" y="176" fill="var(--reverse)" text-anchor="middle">at θ_T</text>
+          <line x1="700" y1="161" x2="590" y2="161" stroke="var(--reverse)" stroke-width="2" marker-end="url(#ar)"/>
+        </g>
+        <!-- reverse lane -->
+        <line x1="580" y1="161" x2="60" y2="161" stroke="var(--reverse)" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#ar)"/>
+        <g font-family="ui-monospace, Menlo, monospace" font-size="12" text-anchor="middle">
+          <text x="352" y="152" fill="var(--reverse)">accumulate  score(zᵢ) += η · u · ∇ℓ(zᵢ)  per example</text>
+        </g>
+        <text x="40" y="215" fill="var(--reverse)" font-family="ui-monospace, Menlo, monospace" font-size="13" letter-spacing="1.5">BACKWARD · INFLUENCE PASS OVER SAVED SNAPSHOTS</text>
+      </svg>
+    </div>
+    <figcaption>
+      <span class="legend">
+        <span><span class="chip" style="background: var(--forward)"></span>forward: SGD training, snapshotting parameters before every minibatch</span>
+        <span><span class="chip" style="background: var(--reverse)"></span>backward: influence estimation, traversing the snapshots in reverse from the validation gradient</span>
+      </span>
+    </figcaption>
+  </figure>
+  <p>Two scores fall out of the accumulated matrix:</p>
+  <ul>
+    <li><code>sgd_last</code> — influence accumulated over the <em>last epoch</em> only.</li>
+    <li><code>sgd_all</code> — influence accumulated over <em>all epochs</em>.</li>
+  </ul>
+  <p><strong>Cleansing</strong> is then simple: rank examples by score, remove the top-K most harmful, retrain, and check whether validation/test error actually drops — compared against removing K random examples and against not removing anything.</p>
+</section>
+
+<section id="estimator">
+  <h2><span class="secnum">2</span>SGD-influence and the estimator</h2>
+
+  <h3>Counterfactual SGD and SGD-influence</h3>
+  <p>Definition 2 defines the counterfactual SGD trajectory that would have resulted if training instance \(j\) had not contributed its gradient:</p>
+  \[ \theta^{[t+1]}_{-j} \leftarrow \theta^{[t]}_{-j} - \tfrac{\eta_t}{|S_t|}\textstyle\sum_{i\in S_t\setminus\{j\}} g(z_i;\theta^{[t]}_{-j}) \]
+  <figure class="paper-shot"><img src="assets/paper/def2.png" alt="Excerpt of Definition 2 defining counterfactual SGD"><figcaption>Definition 2, arXiv:1906.08473 p.3 (excerpt)</figcaption></figure>
+  <p>The counterfactual run starts from the same initialization, removes one instance's gradient whenever it appears, and keeps the normalization at \(1/|S_t|\). Definition 3 calls the resulting parameter difference \(\theta^{[t]}_{-j}-\theta^{[t]}\) the SGD-influence of instance \(j\).</p>
+
+  <h3>Linear Influence Estimation</h3>
+  <p>Problem 4 asks for \( L_{-j}(u)=\langle u,\ \theta^{[T]}_{-j}-\theta^{[T]}\rangle \) for a chosen query vector \(u\). Computing it directly for every \(j\) would require \(N\) counterfactual retrainings, so the paper derives an estimator that obtains all instances' values in one pass over the saved trajectory.</p>
+
+  <h3>The estimator</h3>
+  <p>Equation (2) approximates the missing instance's effect by propagating its gradient through the later SGD steps:</p>
+  \[ \theta^{[T]}_{-j}-\theta^{[T]} \approx \tfrac{\eta_{\pi(j)}}{|S_{\pi(j)}|}\, Z_{T-1}\cdots Z_{\pi(j)+1}\, g(z_j;\theta^{[\pi(j)]}) =: \Delta\theta_{-j},\qquad Z_t=I-\eta_t H^{[t]} \]
+  <figure class="paper-shot"><img src="assets/paper/eq2.png" alt="Excerpt of Equation 2 defining the linearized SGD influence"><figcaption>Equation (2), arXiv:1906.08473 p.4 (excerpt)</figcaption></figure>
+  <p>This follows from a first-order Taylor expansion at each stored point along the actual training trajectory.</p>
+
+  <h3>From one epoch to the score matrix</h3>
+  <p>The one-epoch estimator assumes each instance appears once. For \(K\)-epoch SGD, let \(\pi_1(j),\dots,\pi_K(j)\) be the steps where instance \(z_j\) is used. Each usage contributes one propagated term, and the effects add:</p>
+  \[ \Delta\theta_{-j} \;=\; \sum_{k=1}^{K} \Bigl(\textstyle\prod_{s=1}^{\,T-\pi_k(j)-1} Z_{T-s}\Bigr)\, \tfrac{\eta_{\pi_k(j)}}{|S_{\pi_k(j)}|}\, g\bigl(z_j;\theta^{[\pi_k(j)]}\bigr) \]
+  <p>With \(u^{[t]} := Z_{t+1}\cdots Z_{T-1}\,u\), the linear influence decomposes per epoch: \( \langle u, \Delta\theta_{-j}\rangle = \sum_{k=1}^{K} \bigl\langle u^{[\pi_k(j)]},\ \tfrac{\eta_{\pi_k(j)}}{|S_{\pi_k(j)}|} g(z_j;\theta^{[\pi_k(j)]})\bigr\rangle \).</p>
+  <p>This per-epoch decomposition is exactly why the implementations in this repository accumulate an examples × epochs score matrix: each epoch's contribution is one column. The two rankings used for cleansing are read off that matrix — <code>sgd_last</code> is the last epoch's contribution alone, while <code>sgd_all</code> is the sum over all epochs.</p>
+</section>
+
+<section id="algorithm">
+  <h2><span class="secnum">3</span>The two-phase algorithm and its cost</h2>
+
+  <h3>The two-phase algorithm</h3>
+  <p>The training phase stores \((S_t,\eta_t,\theta^{[t]})\) at every SGD step.</p>
+  <div class="figgrid">
+    <figure class="paper-shot"><img src="assets/paper/alg1.png" alt="Excerpt of Algorithm 1 showing the SGD-influence training phase"><figcaption>Algorithm 1 — training phase stores \((S_t,\eta_t,\theta^{[t]})\) (excerpt, arXiv:1906.08473 p.5)</figcaption></figure>
+    <figure class="paper-shot"><img src="assets/paper/alg2.png" alt="Excerpt of Algorithm 2 showing the SGD-influence inference phase"><figcaption>Algorithm 2 — inference phase (excerpt, same page)</figcaption></figure>
+  </div>
+  <p>The inference phase walks those stored steps backward, accumulating \( \hat L_{-j}(u) \mathrel{{+}{=}} \langle u, \tfrac{\eta_t}{|S_t|}g(z_i;\theta^{[t]})\rangle \) and propagating \( u \mathrel{{-}{=}} \eta_t H^{[t]} u \).</p>
+  <p>The Hessian-vector product \(H^{[t]}u\) is computed by differentiating \(\langle u,\nabla\ell\rangle\); the Hessian itself is never formed.</p>
+
+  <p>The paper also bounds the estimation error: a uniform bound for strongly convex losses (Theorem 5), and a growth bound for non-convex losses under \(\eta=O(\gamma/\sqrt{T})\) (Theorem 6). The estimator is therefore not merely heuristic.</p>
+
+  <h3>What it costs</h3>
+  <p>The training phase stores \((S_t,\eta_t,\theta^{[t]})\) for every step, so disk usage grows linearly with the number of SGD steps — in this repository, these are the per-step snapshot files of §6. The inference phase revisits each stored step once; with maximum minibatch size \(M\) and per-gradient cost \(\delta\), its time is \(O(TM\delta)\), and the Hessian — which would require \(O(p^2)\) memory — is never materialized.</p>
+</section>
+
+<section id="useful">
+  <h2><span class="secnum">4</span>What is it useful for?</h2>
+
+  <h3>Data cleansing without domain knowledge</h3>
+  <p>Rank training examples by their estimated influence on validation loss, remove the most harmful, and retrain. This requires no hand-written outlier rules and still works when practitioners cannot say in advance what an “abnormal” example looks like.</p>
+
+  <h3>Where classical influence functions stop</h3>
+  <p>Classical influence functions assume a convex loss and an optimal model. SGD-influence is defined for the model you actually trained — with any loss and at any stopping point — because it analyzes the SGD steps themselves.</p>
+
+  <h3>The query vector chooses the question</h3>
+  <p>The query vector \(u\) is free. Set it to the gradient of validation loss to estimate how removal changes validation loss, as this repository does for cleansing. Set it to the gradient of one prediction to estimate how removing an example would move that single prediction, enabling per-prediction debugging and explanation.</p>
+
+  <h3>The price</h3>
+  <p>The training phase must store per-step snapshots, making this repository's episode directories disk-heavy. The inference phase then costs one backward pass per stored step.</p>
+</section>
+
+<section id="related">
+  <h2><span class="secnum">5</span>Related work</h2>
+
+  <h3>Classical influence</h3>
+  <p>For linear and generalized linear models at the optimum, the influence of removing one observation has closed forms, developed by Beckman &amp; Trussell (1974), Cook (1977), and Pregibon (1981).</p>
+
+  <h3>Influence functions for modern models</h3>
+  <p>Koh &amp; Liang (2017) generalized this approach to smooth, strongly convex losses at the optimum. The paper summarizes their approximation as Equation (5) on p.5:</p>
+  \[ \hat\theta_{-j}-\hat\theta \approx \tfrac{1}{N}\,\hat H^{-1}\nabla_\theta \ell(z_j;\hat\theta) \]
+  <p>Follow-up work used influence to fix labels (Zhang et al., 2018) and applied Bayesian quadrature to influence estimation (Khanna et al., 2019).</p>
+
+  <h3>How SGD-influence differs</h3>
+  <p>As Section 6 of the paper emphasizes, SGD-influence assumes neither that the obtained model is optimal nor that the loss is convex. Influence is instead defined along the actual SGD trajectory, at every step.</p>
+
+  <h3>Data cleansing by outlier detection</h3>
+  <p>The traditional route requires a domain-specific notion of what counts as “abnormal.” Influence-based cleansing instead targets the validation loss directly, tying the earlier literature back to the practical uses described in <a href="#useful">§4</a>.</p>
+</section>
+
+<section id="reproduction">
+  <h2><span class="secnum">6</span>Reproduction</h2>
+  <p>The Experiments chapter first reproduces the original implementation faithfully (§6), then pins down where it diverges from the paper (§7), reruns the experiments with those points addressed (§8), and compares the two implementations (§9).</p>
+  <p>The experiment is implemented twice, on purpose. The two directories are parallel codebases: the faithful reproduction is introduced here, while the modified version appears in §8 — their differences <em>are</em> the study.</p>
+  <ul>
+    <li><a href="#repro-code">6.1 Code</a> — what <code>reproduction/</code> contains and how its pipeline runs.</li>
+    <li><a href="#repro-results">6.2 Results</a> — the reproduction's plots, side by side with the paper's Figure&nbsp;2.</li>
+  </ul>
+</section>
+
+<section id="repro-code">
+  <h2><span class="secnum">6.1</span>Code</h2>
+  <div class="card">
+    <span class="tag forward">reproduction/</span>
+    <h3>Faithful reimplementation</h3>
+    <p>The original code, cleaned up and reorganized. Five deliberate differences, none of which should affect results:</p>
+    <ul>
+      <li>Seeds fixed for <code>numpy</code> and <code>pytorch</code> too, not only <code>random</code>.</li>
+      <li>Influence scores computed in batch, not per example.</li>
+      <li>Simplified parameter dumping.</li>
+      <li>Augmentation applied once at the start of each epoch.</li>
+      <li>Optimizer assumed to be SGD with <code>momentum=0</code>.</li>
+    </ul>
+  </div>
+
+  <h3>reproduction/ — <code>run.sh &lt;seed&gt; &lt;gpu&gt; &lt;mnist|cifar10&gt;</code></h3>
+  <ol class="steps">
+    <li><code>code/train.py</code> — train, snapshotting parameters before every minibatch.
+      <span class="out">→ <code>epochNN_model.dat</code>, <code>epochNN_optimizer.dat</code>, <code>score.dat</code>, <code>config.json</code></span></li>
+    <li><code>code/infl.py</code> — batched per-example influence via <code>exgrads</code>, reverse traversal.
+      <span class="out">→ <code>infl_sgd_at_epoch20.dat</code> (matrix: examples × epochs)</span></li>
+    <li><code>code/eval.py</code> — retrain after removing top-K by <code>sgd_last</code> / <code>sgd_all</code> / <code>random</code>, K = 1…10000.
+      <span class="out">→ <code>eval_epoch_19_to_20.dat</code></span></li>
+    <li><code>visualize/sumup.py</code> (run separately) — average test error over trials in <code>MIRROR/</code>.
+      <span class="out">→ error-vs-K plots</span></li>
+  </ol>
+</section>
+
+<section id="repro-results">
+  <h2><span class="secnum">6.2</span>Results</h2>
+
+  <div class="part">
+    <p class="part-label paper">The paper</p>
+    <figure class="paper-shot"><img src="assets/paper/fig2.png" alt="Paper Figure 2: average test misclassification rate after data cleansing on MNIST and CIFAR10" style="max-width: 100%;">
+      <figcaption>Figure 2 — average test misclassification after cleansing, arXiv:1906.08473 p.9 (excerpt)</figcaption>
+    </figure>
+  </div>
+
+  <div class="part">
+    <p class="part-label ours">This reproduction</p>
+    <div class="figgrid">
+      <figure>
+        <img src="../reproduction/VIEWs/mnist.png" alt="Reproduction: test error vs number of removed examples on MNIST" loading="lazy">
+        <figcaption>MNIST — final-epoch replay</figcaption>
+      </figure>
+      <figure>
+        <img src="../reproduction/VIEWs/cifar10.png" alt="Reproduction: test error vs number of removed examples on CIFAR-10" loading="lazy">
+        <figcaption>CIFAR-10 — final-epoch replay</figcaption>
+      </figure>
+    </div>
+  </div>
+
+  <div class="splitnote">
+    <div class="obs">
+      <p>For moderate \(K\), influence-ranked removal dips below the no-removal baseline in both the paper and this reproduction, at the same error scale (MNIST ≈0.008, CIFAR-10 ≈0.16). At \(K=10^4\) removal hurts in both; the reproduction's <code>sgd_last</code> rises further (≈0.018) than the paper's approximate curve (≈0.010).</p>
+      <p class="sum">The reproduction matches the paper qualitatively and in scale.</p>
+    </div>
+    <div class="skey">
+      <p class="panel-label">Key</p>
+      <table class="mapkey">
+        <tbody>
+          <tr><td><code>sgd_all</code></td><td>Proposed</td></tr>
+          <tr><td><code>sgd_last</code></td><td>Proposed (Approx.)</td></tr>
+          <tr><td><code>random</code></td><td>Random</td></tr>
+          <tr><td>baseline</td><td>No Removal</td></tr>
+        </tbody>
+      </table>
+      <p class="keynote">Protocol = the paper's counterfactual last epoch (p.8), i.e. final-epoch replay. The paper averages 30 splits; this reproduction fewer, so curves are noisier. Autoencoder / Isolation Forest / K&amp;L are not reproduced.</p>
+    </div>
+  </div>
+</section>
+
+<section id="fix-4">
+  <p class="eyebrow">Real difference</p>
+  <h2><span class="secnum">7.4</span>What should BatchNorm see when examples are removed?</h2>
+  <div class="part">
+    <p class="part-label paper">The paper</p>
+    <p><strong>Paper</strong> — Definition 2 (p.3) removes the gradient term of the absent instance while keeping the original normalization:</p>
+    \[ \theta^{[t+1]}_{-j} \leftarrow \theta^{[t]}_{-j} - \tfrac{\eta_t}{|S_t|}\textstyle\sum_{i\in S_t\setminus\{j\}} g(z_i;\theta^{[t]}_{-j}) \]
+    <figure class="paper-shot"><img src="assets/paper/def2.png" alt="Excerpt of Definition 2 defining counterfactual SGD"><figcaption>Definition 2, arXiv:1906.08473 p.3 (excerpt)</figcaption></figure>
+    <p>With BatchNorm the per-example loss \(\ell(z;\theta)\) is not defined in isolation, and the paper does not specify which batch statistics the counterfactual should use — this point is genuinely undefined by the paper.</p>
+  </div>
+  <div class="part">
+    <p class="part-label orig">Original implementation</p>
+    <div class="codeblock">
+      <div class="codehead"><span>experiment/Sec72/eval.py:54–64</span><a href="https://github.com/sato9hara/sgd-influence/blob/ffc8c064bea682342910daabde08e8e2c4ee89d4/experiment/Sec72/eval.py#L54-L64">view on GitHub</a></div>
+      <pre><code><span class="cl">for i, s in zip(idx, seeds):</span><span class="cl hl">    if i in skip_idx:</span><span class="cl hl">        continue</span><span class="cl">    t += 1</span><span class="cl">    trainset.seed = s</span><span class="cl">    d = trainset[idx_train[i]]</span><span class="cl">    Xtr.append(d[0])</span><span class="cl">    ytr.append(d[1])</span></code></pre>
+    </div>
+    <p><strong>Original</strong> — removed examples are skipped <em>before</em> the batch is formed (<code>if i in skip_idx: continue</code>).</p>
+    <p>The forward pass — and therefore the BatchNorm statistics normalizing every remaining example — is computed over \(S_t\setminus\{\mathrm{removed}\}\). Removing example \(j\) changes the gradients of all other examples through the statistics, a second-order effect the influence estimator (Eq. 2) never models.</p>
+  </div>
+  <div class="part">
+    <p class="part-label ours">This implementation</p>
+    <div class="codeblock">
+      <div class="codehead"><span>extra-1/code/3-evaluate.py:29–36</span><a href="https://github.com/grad13/Experiments--Data-Cleansing-with-SGD/blob/9b2b96ee27c0ad6ba68127e4d260677f4bb06f2b/extra-1/code/3-evaluate.py#L29-L36">view on GitHub</a></div>
+      <pre><code><span class="cl">for i,x,y in datasets.train:</span><span class="cl">    wrong_mask = torch.tensor([iii.item() in removal_index for iii in i])</span><span class="cl">    good_mask  = ~wrong_mask</span><span class="cl">    good_mask  = good_mask.cuda(config.gpu)</span><span class="cl"></span><span class="cl hl">    logit = model(x)</span><span class="cl">    loss  = F.cross_entropy(logit, y, reduction='none')</span><span class="cl hl">    loss  = (loss*good_mask).mean()</span></code></pre>
+    </div>
+    <p><strong>This implementation</strong> — the full original batch is forwarded, and removed examples are masked out of the unreduced loss.</p>
+    <p>Removed examples contribute no gradient, but BatchNorm keeps the original \(S_t\) statistics — the counterfactual then matches what the estimator linearizes: removal of the gradient contribution only.</p>
+  </div>
+  <div class="part">
+    <p class="part-label verdict">The difference</p>
+    <p>For MNIST (no BatchNorm) the two choices are provably identical; both reduce exactly to Definition 2. For CIFAR-10 they differ, and the choice here keeps the evaluation consistent with the quantity the scores estimate.</p>
+  </div>
+</section>
+
+<section id="modified">
+  <h2><span class="secnum">8</span>Modified experiments</h2>
+
+  <div class="card">
+    <span class="tag reverse">extra-1/</span>
+    <h3>Bug-fixed reimplementation</h3>
+    <p>The same experiment re-examining four suspected issues in the original implementation (each checked against the paper in §7), plus one augmentation correction. Run orchestration is parallelized over 8 GPUs and seeds 0–7.</p>
+    <ul>
+      <li><a href="#fix-1">§7.1 — query-update scale (real bug)</a></li>
+      <li><a href="#fix-2">§7.2 — BatchNorm statistics during scoring (real divergence)</a></li>
+      <li><a href="#fix-3">§7.3 — retraining step scale (claim not confirmed)</a></li>
+      <li><a href="#fix-4">§7.4 — batch composition under removal (differing choice)</a></li>
+    </ul>
+  </div>
+
+  <p>One further correction outside the four: random-crop padding is filled with the normalized value of a raw zero pixel (<code>−mean/std</code>, per channel on CIFAR-10) instead of a literal zero in normalized space (<a href="https://github.com/grad13/Experiments--Data-Cleansing-with-SGD/blob/9b2b96ee27c0ad6ba68127e4d260677f4bb06f2b/extra-1/code/augmentation_zoo.py"><code>extra-1/code/augmentation_zoo.py</code></a>). This concerns data augmentation, not the estimator, and has no counterpart in the paper.</p>
+
+  <h3>extra-1/ — <code>run.py</code> (jobs distributed over GPUs 0–7)</h3>
+  <ol class="steps">
+    <li><code>code/1-train.py</code> — both datasets × seeds 0–7 × 20 epochs.
+      <span class="out">→ <code>params/NN.pt</code>, <code>trails.pkl</code>, <code>config.json</code></span></li>
+    <li><code>code/2-score.py</code> — influence scores per training episode.
+      <span class="out">→ <code>scores/20.pkl</code></span></li>
+    <li><code>code/3-evaluate.py</code> — counterfactual retraining from <code>start_epoch</code> ∈ {0, 19}.
+      <span class="out">→ <code>evaluations/00_to_20.pkl</code>, <code>19_to_20.pkl</code></span></li>
+    <li><code>visualize/sumup.py</code> — plots per dataset and start epoch.
+      <span class="out">→ <code>VIEW/data=&lt;dataset&gt;-start_epoch=&lt;NN&gt;.png</code></span></li>
+  </ol>
+</section>
+
+<section id="comparison">
+  <h2><span class="secnum">9</span>Comparison</h2>
+  <p>These plots compare the faithful reproduction (§6) against the bug-fixed variant (§8).</p>
+  <p>All plots show <strong>test error rate vs. number of removed training examples K</strong> (log scale), averaged over trials: removal by <span style="white-space: nowrap;"><code>sgd_last</code>,</span> <code>sgd_all</code>, and <code>random</code>, against the no-removal baseline (horizontal line). Curves below the baseline mean the cleansing helped.</p>
+  <p>The reproduction's evaluation replays only the final epoch, matching the bug-fixed run at <code>start_epoch=19</code>; these form the like-for-like pair for each dataset. The bug-fixed variant additionally evaluates a full replay at <code>start_epoch=0</code>, which has no reproduction counterpart.</p>
+  <div class="note"><strong>start_epoch</strong> — counterfactual retraining resumes from the saved snapshot taken just before that epoch: <code>start_epoch=0</code> replays all 20 epochs without the removed examples; <code>start_epoch=19</code> replays only the final epoch.</div>
+
+  <ul>
+    <li><a href="#comp-mnist">9.1 MNIST</a> — matched-protocol and full-replay results on MNIST.</li>
+    <li><a href="#comp-cifar">9.2 CIFAR-10</a> — matched-protocol and full-replay results on CIFAR-10.</li>
+  </ul>
+
+  <div class="part">
+    <p class="part-label verdict">Takeaway</p>
+    <p>The bug fixes do not overturn the paper's qualitative claim: influence-ranked cleansing beats random removal for small-to-moderate \(K\) in both variants. Their visible effect is concentrated in the CIFAR-10 details, where BatchNorm handling matters.</p>
+  </div>
+</section>
+
+<section id="comp-mnist">
+  <h2><span class="secnum">9.1</span>MNIST</h2>
+  <div class="matrix">
+    <div class="mx-corner"></div>
+    <div class="mx-col">reproduction (§6)</div>
+    <div class="mx-col">bug-fixed (§8)</div>
+    <div class="mx-row"><span>final epoch only</span><code>start_epoch=19</code></div>
+    <figure><img src="../reproduction/VIEWs/mnist.png" alt="MNIST: reproduction, final-epoch replay" loading="lazy"></figure>
+    <figure><img src="../extra-1/VIEW/data=mnist-start_epoch=19.png" alt="MNIST: bug-fixed, final-epoch replay (start_epoch=19)" loading="lazy"></figure>
+    <div class="mx-row"><span>all 20 epochs</span><code>start_epoch=0</code></div>
+    <div class="mx-empty">not run in the reproduction</div>
+    <figure><img src="../extra-1/VIEW/data=mnist-start_epoch=00.png" alt="MNIST: bug-fixed, full replay (start_epoch=0)" loading="lazy"></figure>
+  </div>
+  <p class="longcap"><span class="figno">Figure 9.1 —</span> MNIST, reproduction vs. bug-fixed. <span class="runin">Takeaway:</span> the two implementations agree qualitatively — influence-ranked removal stays at or below the no-removal baseline through moderate \(K\) while random removal hovers at the baseline, and removing on the order of \(10^4\) examples hurts regardless of ranking, in every panel. <span class="runin">Key:</span> columns — which implementation (reproduction §6 vs. bug-fixed §8); rows — replay span after removal (final epoch only, <code>start_epoch=19</code>, vs. all 20 epochs, <code>start_epoch=0</code>); the dashed cell (reproduction × full replay) was not run. <span class="fine">Legend names differ per column: <code>sgd_last</code>/<code>sgd_all</code> on the left are “using only last / all epoch score” on the right — the same rankings.</span></p>
+
+  <h3>Discussion</h3>
+  <p>The MNIST model contains no BatchNorm, so two of the four §7 findings (§7.2 scoring statistics, §7.4 batch composition) cannot change anything here; the substantive difference between the columns is the query-update fix (§7.1). Yet the cleansing curves barely move: both implementations dip below the baseline through moderate \(K\) and blow up at \(10^4\). This suggests the mis-scaled Hessian correction in the original mainly distorts score <em>magnitudes</em>, while the head of the ranking — the examples whose removal actually helps — stays largely intact on a dataset this easy.</p>
+  <p>The bottom-right panel adds what the reproduction cannot: with all 20 epochs replayed (<code>start_epoch=0</code>), the below-baseline dip survives, so the benefit of influence-ranked cleansing is not an artifact of replaying only the final epoch. The penalty at \(K=10^4\) is also steeper there — removing a fifth of the training set costs more when the whole trajectory feels the loss.</p>
+</section>
+
+<section id="comp-cifar">
+  <h2><span class="secnum">9.2</span>CIFAR-10</h2>
+  <div class="matrix">
+    <div class="mx-corner"></div>
+    <div class="mx-col">reproduction (§6)</div>
+    <div class="mx-col">bug-fixed (§8)</div>
+    <div class="mx-row"><span>final epoch only</span><code>start_epoch=19</code></div>
+    <figure><img src="../reproduction/VIEWs/cifar10.png" alt="CIFAR-10: reproduction, final-epoch replay" loading="lazy"></figure>
+    <figure><img src="../extra-1/VIEW/data=cifar10-start_epoch=19.png" alt="CIFAR-10: bug-fixed, final-epoch replay (start_epoch=19)" loading="lazy"></figure>
+    <div class="mx-row"><span>all 20 epochs</span><code>start_epoch=0</code></div>
+    <div class="mx-empty">not run in the reproduction</div>
+    <figure><img src="../extra-1/VIEW/data=cifar10-start_epoch=00.png" alt="CIFAR-10: bug-fixed, full replay (start_epoch=0)" loading="lazy"></figure>
+  </div>
+  <p class="longcap"><span class="figno">Figure 9.2 —</span> CIFAR-10, reproduction vs. bug-fixed. <span class="runin">Takeaway:</span> CIFAR-10 is noisier, but both implementations tell the same story — modest gains around \(K \approx 10^2\)–\(10^3\) and sharp degradation at \(10^4\), with curves more sensitive than on MNIST, consistent with the BatchNorm-related points (§7.2, §7.4). <span class="runin">Key:</span> columns — which implementation (reproduction §6 vs. bug-fixed §8); rows — replay span after removal (final epoch only, <code>start_epoch=19</code>, vs. all 20 epochs, <code>start_epoch=0</code>); the dashed cell (reproduction × full replay) was not run. <span class="fine">Legend names differ per column: <code>sgd_last</code>/<code>sgd_all</code> on the left are “using only last / all epoch score” on the right — the same rankings.</span></p>
+
+  <h3>Discussion</h3>
+  <p>CIFAR-10 is where the fixes should matter: the model has BatchNorm, so the scoring statistics (§7.2) and the batch composition under removal (§7.4) genuinely change the computation. The matched-protocol column bears this out — the bug-fixed run holds below the baseline over a wider range of \(K\) (roughly \(1\)–\(10^3\)) than the reproduction, whose dip is confined to \(K \approx 10^2\)–\(10^3\). Cleaner influence estimates appear to buy a broader useful head of the ranking.</p>
+  <p>The full-replay row tempers the picture: with all 20 epochs replayed, the curves cross the baseline earlier (around \(10^3\)) and the random curve wanders more, i.e. the counterfactual is noisier when drift can compound over the whole trajectory. The qualitative claim still holds in every panel, but on CIFAR-10 the margin is thin — consistent with the caveat in §10 that conclusions on this dataset are sensitive to how BatchNorm is handled.</p>
+</section>
+
+<section id="conclusion">
+  <h2><span class="secnum">10</span>Conclusion</h2>
+
+  <h3>What the re-examination found</h3>
+  <p>Of the four suspected issues in the original implementation, two are verified divergences from the paper: the query-vector update is under-scaled by \(1/|S_t|\) (§7.1), and per-example gradients are taken under batch-size-1 BatchNorm statistics while overwriting stored statistics (§7.2). One claim does not survive scrutiny: the retraining-step scale matches Definition 2 exactly in both implementations (§7.3). One point is genuinely undefined by the paper — which batch statistics the counterfactual should use under removal — and this repository chooses estimator-consistent masking (§7.4).</p>
+
+  <h3>Does the method hold up?</h3>
+  <p>Yes, qualitatively. In both the faithful reproduction and the bug-fixed variant, removing the top-\(K\) influence-ranked examples beats random removal and can push test error below the no-removal baseline for small-to-moderate \(K\) on MNIST and CIFAR-10 (see the comparison in §9). At very large \(K\), around \(10^4\), removal hurts regardless of ranking. The influence ranking carries real signal about which examples harm the model.</p>
+
+  <h3>Caveats</h3>
+  <p>This is a private reproduction: the divergences were identified by code inspection and have not been confirmed with the original authors; CIFAR-10 conclusions are sensitive to how BatchNorm is handled, which the paper does not specify; and the two implementations differ in more than the four points examined, including seeding and augmentation timing, as documented in §6.</p>
+
+  <p>Where to go next: the pipelines in §6 and §8 rerun everything, and every §7 claim links the exact paper statement and code lines so it can be re-verified independently.</p>
+</section>
+
+<section id="settings">
+  <h2><span class="secnum">A</span>Experimental settings</h2>
+  <p>Both variants run the same three stages on MNIST and CIFAR-10, with a small CNN, 20 epochs, SGD (<code>lr=0.05</code>, <code>momentum=0</code>, batch 64), and 10,000 training examples held out as the validation set.</p>
+  <div class="tablewrap breakout">
+    <table>
+      <thead>
+        <tr><th>Topic</th><th>Detail</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Hardware</td><td><strong>CUDA is required.</strong> Data and models are moved with <code>.cuda(gpu)</code> throughout; there is no CPU fallback. cuDNN runs in deterministic mode.</td></tr>
+        <tr><td>Dependencies</td><td><code>torch</code>, <code>torchvision</code>, <code>numpy</code>, <code>joblib</code>, <code>matplotlib</code>, <code>exgrads</code> (per-example gradients); <code>extra-1/run.py</code> additionally needs <code>query_queue_and_parallel</code>.</td></tr>
+        <tr><td>Data</td><td>MNIST / CIFAR-10 are downloaded and cached automatically under <code>data/</code> (tensor caches in <code>data/.cache/</code>).</td></tr>
+        <tr><td>Config merge</td><td>Scoring/eval scripts merge the saved episode config with CLI args as <code>config | vars(args)</code> — CLI values, <em>including untouched defaults</em>, override the saved config.</td></tr>
+        <tr><td>Snapshot cost</td><td>Parameters are saved before every minibatch step; episode directories grow large — plan disk accordingly.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer>
+  <p><a href="https://github.com/grad13/Experiments--Data-Cleansing-with-SGD">GitHub</a> · <a href="https://arxiv.org/abs/1906.08473">Paper (arXiv:1906.08473)</a> · <a href="https://github.com/sato9hara/sgd-influence">Original code</a></p>
+  <p>Excerpts © their authors · quoted code MIT · rest © 2026 grad13</p>
+</footer>
+
+</div>
+
+<script>
+  (function () {
+    document.documentElement.classList.add('tabbed');
+    var links = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
+    var pageIds = ['top', 'idea', 'estimator', 'algorithm', 'useful', 'related', 'reproduction', 'repro-code', 'repro-results', 'fixes', 'fix-1', 'fix-2', 'fix-3', 'fix-4', 'modified', 'comparison', 'comp-mnist', 'comp-cifar', 'conclusion', 'settings'];
+    function show(id) {
+      var target = document.getElementById(id);
+      if (!target) {
+        target = document.getElementById('top');
+      }
+      var page = target.closest('.wrap > section, header.hero') || document.getElementById('top');
+      pageIds.forEach(function (x) {
+        var el = document.getElementById(x);
+        if (el) el.classList.toggle('page-active', el === page);
+      });
+      links.forEach(function (a) {
+        a.classList.toggle('active', a.getAttribute('href') === '#' + id);
+      });
+      var scroll = function () {
+        if (target === page) {
+          window.scrollTo(0, 0);
+        } else {
+          target.scrollIntoView({ behavior: 'instant', block: 'start' });
+        }
+      };
+      requestAnimationFrame(scroll);
+    }
+    var current = function () { return location.hash.slice(1) || 'top'; };
+    window.addEventListener('hashchange', function () { show(current()); });
+    window.addEventListener('load', function () { show(current()); });
+    show(current());
+  })();
+</script>
+
+</body>
+</html>

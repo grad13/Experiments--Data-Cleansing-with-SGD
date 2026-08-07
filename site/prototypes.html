@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototypes v2 — text below figures, 6 patterns</title>
+<style>
+  :root {
+    --paper:#FFF; --ink:#1C2732; --muted:#5C6B77; --line:#D8DEE3;
+    --forward:#3E6C99; --forward-soft:#E3EBF3; --reverse:#B0521D; --reverse-soft:#F5E7DC;
+    --code-bg:#F2F4F6; --good:#2E7D57;
+    --shadow:0 1px 2px rgba(28,39,50,.06),0 8px 24px rgba(28,39,50,.05);
+  }
+  *{box-sizing:border-box}
+  body{background:#F3F5F7;color:var(--ink);font-family:Charter,"Iowan Old Style",Georgia,serif;font-size:1.0325rem;line-height:1.6;margin:0;padding:2rem 1rem 6rem}
+  .proto{max-width:52rem;margin:0 auto 3.5rem;background:var(--paper);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:2rem 2.4rem 2.4rem}
+  .proto-tag{display:inline-block;font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;background:var(--ink);color:#fff;border-radius:999px;padding:.25em .9em;margin-bottom:.3rem}
+  .proto-name{font-size:1.2rem;font-weight:700;margin:.1rem 0 .2rem}
+  .proto-why{font-size:.85rem;color:var(--muted);margin:0 0 1.4rem}
+  h2{font-size:1.3rem;margin:0 0 .9rem}
+  .secnum{color:var(--reverse);font-weight:700;margin-right:.4rem}
+  code{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:.85em;background:var(--code-bg);border-radius:3px;padding:.08em .3em}
+  .label{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;margin:0 0 .5rem;color:var(--muted)}
+
+  /* dummy figures: always the same block on top */
+  .figs{display:grid;grid-template-columns:1fr 1fr;gap:.9rem;margin-bottom:1.2rem}
+  .figcard{background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);padding:.7rem;position:relative}
+  .ph{position:relative;aspect-ratio:4/3;border:1px solid var(--line);border-radius:6px;background:
+    linear-gradient(135deg,transparent 49.6%,#C9D4DC 49.6%,#C9D4DC 50.4%,transparent 50.4%),
+    linear-gradient(45deg,transparent 49.6%,#C9D4DC 49.6%,#C9D4DC 50.4%,transparent 50.4%),#FAFBFC}
+  .ph::after{content:attr(data-t);position:absolute;inset:auto 0 8px 0;text-align:center;font-family:ui-monospace,Menlo,monospace;font-size:.7rem;color:var(--muted)}
+
+  /* ===== A: numbered callouts ===== */
+  .pin{position:absolute;width:1.4rem;height:1.4rem;border-radius:50%;background:var(--reverse);color:#fff;font-family:ui-monospace,Menlo,monospace;font-size:.75rem;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow)}
+  .callouts{list-style:none;margin:0;padding:0;display:grid;gap:.55rem}
+  .callouts li{display:grid;grid-template-columns:1.5rem 1fr;gap:.7rem;align-items:baseline;font-size:.97rem}
+  .callouts .n{width:1.5rem;height:1.5rem;border-radius:50%;background:var(--reverse);color:#fff;font-family:ui-monospace,Menlo,monospace;font-size:.8rem;display:flex;align-items:center;justify-content:center}
+  .callouts li.sum{border-top:1px solid var(--line);padding-top:.85rem;margin-top:.35rem;font-weight:600;font-size:1.02rem}
+  .callouts li.sum .n{background:var(--ink)}
+  .keyline{font-size:.82rem;color:var(--muted);margin:.9rem 0 0}
+
+  /* ===== B: verdict bar under figures ===== */
+  .verdictbar{display:flex;gap:1rem;align-items:baseline;background:var(--ink);color:#fff;border-radius:8px;padding:.85rem 1.2rem}
+  .verdictbar .label{color:#F0C9AC;margin:0;flex-shrink:0}
+  .verdictbar p{margin:0;font-size:.97rem}
+  .verdictbar code{background:rgba(255,255,255,.16);color:#fff}
+  .b-notes{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.8rem;margin-top:.9rem}
+  .b-note{font-size:.8rem;color:var(--muted);border-top:2px solid var(--line);padding-top:.5rem}
+  .b-note strong{display:block;color:var(--ink);font-size:.82rem}
+
+  /* ===== C: two-column split below ===== */
+  .c-grid{display:grid;grid-template-columns:1.5fr 1fr;gap:1.6rem}
+  .c-obs p{margin:0 0 .6rem;font-size:.97rem}
+  .c-obs .sum{font-weight:600;border-left:3px solid var(--reverse);padding-left:.8rem}
+  .c-key table{border-collapse:collapse;width:100%;font-size:.85rem}
+  .c-key td{border-top:1px solid var(--line);padding:.3rem .5rem .3rem 0}
+  .c-key .fine{font-size:.78rem;color:var(--muted);margin:.6rem 0 0}
+
+  /* ===== D: tabs ===== */
+  .d-panel{border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .d-tabs{display:flex;background:var(--code-bg);border-bottom:1px solid var(--line)}
+  .d-tabs button{font-family:ui-monospace,Menlo,monospace;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;border:0;background:none;padding:.65rem 1.2rem;cursor:pointer;color:var(--muted);border-right:1px solid var(--line)}
+  .d-tabs button.on{background:#fff;color:var(--reverse);font-weight:700}
+  .d-body{padding:1.05rem 1.3rem}
+  .d-body[hidden]{display:none}
+  .d-body p{margin:0 0 .4rem}
+  .d-body p:last-child{margin:0}
+  .d-key p{font-size:.88rem;color:var(--muted)}
+  .d-key strong{color:var(--ink)}
+
+  /* ===== E: academic long caption ===== */
+  .e-cap{border-top:2px solid var(--ink);padding-top:.7rem;font-size:.92rem;line-height:1.55}
+  .e-cap .figno{font-weight:700}
+  .e-cap .runin{font-weight:700}
+  .e-cap .fine{color:var(--muted)}
+
+  /* ===== F: three stacked strips ===== */
+  .f-strip{display:grid;grid-template-columns:8.5rem 1fr;gap:1rem;padding:.85rem 0;border-top:1px solid var(--line)}
+  .f-strip:first-of-type{border-top:2px solid var(--ink)}
+  .f-strip .label{margin:0;align-self:baseline}
+  .f-strip p{margin:0;font-size:.95rem}
+  .f-strip.f-verdict .label{color:var(--reverse)}
+  .f-strip.f-verdict p{font-weight:600;font-size:1.02rem}
+  .f-strip.f-fine p{font-size:.82rem;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<!-- ============================ A ============================ -->
+<section class="proto">
+  <span class="proto-tag">A</span>
+  <p class="proto-name">Numbered callouts — 観察 → ∴ 結論 → 読み方1行</p>
+  <p class="proto-why">図上のピンと下の番号リストが対応。結論は「∴」の太字行。読み方は最後に1行だけ。</p>
+  <h2><span class="secnum">6.2</span>Results</h2>
+  <div class="figs">
+    <div class="figcard"><div class="ph" data-t="paper Fig.2 (excerpt)"></div><span class="pin" style="left:38%;top:58%">1</span><span class="pin" style="right:10%;top:16%">2</span></div>
+    <div class="figcard"><div class="ph" data-t="reproduction MNIST"></div><span class="pin" style="left:42%;top:60%">1</span><span class="pin" style="right:9%;top:14%">2</span></div>
+  </div>
+  <ul class="callouts">
+    <li><span class="n">1</span><span>Moderate K: influence-ranked removal dips below the baseline — in the paper and here, at the same error scale.</span></li>
+    <li><span class="n">2</span><span>K=10⁴: removal hurts in both; the reproduction's <code>sgd_last</code> rises further (≈0.018 vs ≈0.010).</span></li>
+    <li class="sum"><span class="n">∴</span><span>The reproduction matches the paper qualitatively and in scale.</span></li>
+  </ul>
+  <p class="keyline"><code>sgd_all</code>≈Proposed · <code>sgd_last</code>≈Proposed (Approx.) · baseline≈No Removal · protocol = paper p.8 · 30 splits in the paper, fewer here.</p>
+</section>
+
+<!-- ============================ B ============================ -->
+<section class="proto">
+  <span class="proto-tag">B</span>
+  <p class="proto-name">Verdict bar — 図の直下に濃色の結論バー</p>
+  <p class="proto-why">図の直下、濃紺バーの1文が結論。その下に3カラムの小さな注(対応・プロトコル・試行数)。</p>
+  <h2><span class="secnum">6.2</span>Results</h2>
+  <div class="figs">
+    <div class="figcard"><div class="ph" data-t="paper Fig.2 (excerpt)"></div></div>
+    <div class="figcard"><div class="ph" data-t="reproduction MNIST"></div></div>
+  </div>
+  <div class="verdictbar">
+    <p class="label">Verdict</p>
+    <p>Reproduced — same shape, same scale; one visible gap at K=10⁴ on MNIST (<code>sgd_last</code>).</p>
+  </div>
+  <div class="b-notes">
+    <div class="b-note"><strong>Curves</strong><code>sgd_all</code>≈Proposed, <code>sgd_last</code>≈Approx., baseline≈No Removal</div>
+    <div class="b-note"><strong>Protocol</strong>final-epoch replay = the paper's counterfactual last epoch (p.8)</div>
+    <div class="b-note"><strong>Trials</strong>paper averages 30 splits; this reproduction fewer — noisier curves</div>
+  </div>
+</section>
+
+<!-- ============================ C ============================ -->
+<section class="proto">
+  <span class="proto-tag">C</span>
+  <p class="proto-name">Split columns — 左に観察と結論、右に対応表</p>
+  <p class="proto-why">図の下を2カラムに分割。左は短い観察2文+左罫線の結論、右は Key 表と細字の注。</p>
+  <h2><span class="secnum">6.2</span>Results</h2>
+  <div class="figs">
+    <div class="figcard"><div class="ph" data-t="paper Fig.2 (excerpt)"></div></div>
+    <div class="figcard"><div class="ph" data-t="reproduction MNIST"></div></div>
+  </div>
+  <div class="c-grid">
+    <div class="c-obs">
+      <p>For moderate K, influence-ranked removal dips below the baseline in both the paper and this reproduction, at the same error scale. At K=10⁴ removal hurts in both; the reproduction's <code>sgd_last</code> rises further (≈0.018 vs ≈0.010).</p>
+      <p class="sum">The reproduction matches the paper qualitatively and in scale.</p>
+    </div>
+    <div class="c-key">
+      <p class="label">Key</p>
+      <table>
+        <tr><td><code>sgd_all</code></td><td>Proposed</td></tr>
+        <tr><td><code>sgd_last</code></td><td>Proposed (Approx.)</td></tr>
+        <tr><td><code>random</code></td><td>Random</td></tr>
+        <tr><td>baseline</td><td>No Removal</td></tr>
+      </table>
+      <p class="fine">Protocol = paper p.8 (final-epoch replay). Paper: 30 splits; here: fewer.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ D ============================ -->
+<section class="proto">
+  <span class="proto-tag">D</span>
+  <p class="proto-name">Tabbed panel — Takeaway / How to read を切替</p>
+  <p class="proto-why">図の下の1パネル。デフォルトは Takeaway、読み方はタブを開いた人だけに見せる。</p>
+  <h2><span class="secnum">6.2</span>Results</h2>
+  <div class="figs">
+    <div class="figcard"><div class="ph" data-t="paper Fig.2 (excerpt)"></div></div>
+    <div class="figcard"><div class="ph" data-t="reproduction MNIST"></div></div>
+  </div>
+  <div class="d-panel">
+    <div class="d-tabs">
+      <button class="on" onclick="dtab(this,'da')">Takeaway</button>
+      <button onclick="dtab(this,'db')">How to read</button>
+    </div>
+    <div class="d-body" id="da">
+      <p>The reproduction matches the paper qualitatively and in scale: below-baseline dips for moderate K, sharp degradation at 10⁴. Visible gap: <code>sgd_last</code> at K=10⁴ on MNIST (≈0.018 vs ≈0.010).</p>
+    </div>
+    <div class="d-body d-key" id="db" hidden>
+      <p><strong>Curves</strong> — <code>sgd_all</code>≈Proposed · <code>sgd_last</code>≈Proposed (Approx.) · <code>random</code>≈Random · baseline≈No Removal.</p>
+      <p><strong>Protocol</strong> — final-epoch replay = the paper's counterfactual last epoch (p.8).</p>
+      <p><strong>Trials</strong> — paper averages 30 splits; this reproduction fewer.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ E ============================ -->
+<section class="proto">
+  <span class="proto-tag">E</span>
+  <p class="proto-name">Long caption — 学術誌の図キャプション1段落</p>
+  <p class="proto-why">図の下は太罫線+「Figure 6.2」で始まる1段落のみ。結論→対応→注を run-in 見出しで繋ぐ。ブロックが一切ない最軽量案。</p>
+  <h2><span class="secnum">6.2</span>Results</h2>
+  <div class="figs">
+    <div class="figcard"><div class="ph" data-t="paper Fig.2 (excerpt)"></div></div>
+    <div class="figcard"><div class="ph" data-t="reproduction MNIST"></div></div>
+  </div>
+  <p class="e-cap"><span class="figno">Figure 6.2 —</span> <span class="runin">Takeaway:</span> the reproduction matches the paper qualitatively and in scale; error dips below the baseline for moderate K and degrades at 10⁴, the one gap being <code>sgd_last</code> at K=10⁴ on MNIST (≈0.018 vs ≈0.010). <span class="runin">Key:</span> <code>sgd_all</code>≈Proposed, <code>sgd_last</code>≈Proposed (Approx.), <code>random</code>≈Random, baseline≈No Removal. <span class="fine">Protocol: final-epoch replay, as in the paper (p.8). The paper averages 30 splits; this reproduction fewer, so curves are noisier.</span></p>
+</section>
+
+<!-- ============================ F ============================ -->
+<section class="proto">
+  <span class="proto-tag">F</span>
+  <p class="proto-name">Stacked strips — What you see / So what / Fine print</p>
+  <p class="proto-why">図の下に左ラベル付きの3段(観察 → 結論 → 細目)。上から重要度順に読み下ろす帳票型。</p>
+  <h2><span class="secnum">6.2</span>Results</h2>
+  <div class="figs">
+    <div class="figcard"><div class="ph" data-t="paper Fig.2 (excerpt)"></div></div>
+    <div class="figcard"><div class="ph" data-t="reproduction MNIST"></div></div>
+  </div>
+  <div>
+    <div class="f-strip">
+      <p class="label">What you see</p>
+      <p>Below-baseline dips for moderate K in both; at K=10⁴ removal hurts in both, with the reproduction's <code>sgd_last</code> rising further (≈0.018 vs ≈0.010).</p>
+    </div>
+    <div class="f-strip f-verdict">
+      <p class="label">So what</p>
+      <p>The reproduction matches the paper qualitatively and in scale.</p>
+    </div>
+    <div class="f-strip f-fine">
+      <p class="label">Fine print</p>
+      <p><code>sgd_all</code>≈Proposed · <code>sgd_last</code>≈Approx. · baseline≈No Removal · protocol = paper p.8 · 30 splits in the paper, fewer here.</p>
+    </div>
+  </div>
+</section>
+
+<script>
+function dtab(btn, id){
+  var panel = btn.closest('.d-panel');
+  panel.querySelectorAll('.d-tabs button').forEach(function(b){b.classList.toggle('on', b===btn);});
+  panel.querySelectorAll('.d-body').forEach(function(d){d.hidden = d.id !== id;});
+}
+</script>
+</body>
+</html>

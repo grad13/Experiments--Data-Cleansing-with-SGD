@@ -1,0 +1,21 @@
+-*
++*
+.DS_Store
+__pycache__
+*.pkl
+pull.py
+push.py
+DATASETs
+MIRROR
+CLAUDE.md
+
+# experiment outputs (heavy)
+data/
+ARCHIVEs/
+workroom/
+LOGs/
+RESULTs/
+mnist/
+cifar10/
+*.dat
+*.pt
