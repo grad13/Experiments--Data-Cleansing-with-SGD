@@ -25,7 +25,7 @@ jobs:
       - uses: actions/checkout@v5
         with:
           repository: grad13/launch-pad
-          ref: e8752560b32d96af79821616f7b9cbae948f71bd
+          ref: f409fa11c09de867d00fa18096fb2057cce95385
           path: .launch-pad-provider
           ssh-key: '${{ secrets.LAUNCH_PAD_READ_KEY }}'
           persist-credentials: false
