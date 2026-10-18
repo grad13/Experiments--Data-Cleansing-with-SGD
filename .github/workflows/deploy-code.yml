@@ -1,0 +1,47 @@
+name: Deploy Experiments--Data-Cleansing-with-SGD code
+
+on:
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: choice
+        required: true
+        default: dev
+        options: [dev, prod]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/checkout@v5
+        with:
+          repository: grad13/launch-pad
+          ref: e8752560b32d96af79821616f7b9cbae948f71bd
+          path: .launch-pad-provider
+          ssh-key: '${{ secrets.LAUNCH_PAD_READ_KEY }}'
+          persist-credentials: false
+      - uses: ./.launch-pad-provider/.github/actions/deploy-v3
+        with:
+          track: code
+          form: fullsite
+          job: deploy
+          contract_version: "1"
+          project: Data-Cleansing
+          name: Experiments--Data-Cleansing-with-SGD
+          source_dir: site/
+          environment: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && 'prod' || github.event_name == 'push' && 'dev' || github.event.inputs.environment }}
+          data_namespaces: '[]'
+          hub_face: true
+          prod_smoke: true
+          sakura_ssh_private_key: '${{ secrets.SAKURA_SSH_PRIVATE_KEY }}'
+          sakura_host: '${{ secrets.SAKURA_HOST }}'
+          sakura_user: '${{ secrets.SAKURA_USER }}'
